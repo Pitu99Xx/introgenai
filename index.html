@@ -1,0 +1,2588 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>IntroGen — Generador de Introducciones Científicas</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#2563eb;--accent-dim:#1d4ed8;
+  --teal:#059669;--teal-dim:#047857;
+  --amber:#d97706;--red:#dc2626;--green:#16a34a;
+  --purple:#7c3aed;
+  --surface:#f7f8fa;--s2:#ffffff;--s3:#f3f4f6;
+  --border:#e5e7eb;--bhi:#d1d5db;
+  --text:#111827;--t2:#4b5563;--t3:#9ca3af;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:0 4px 16px rgba(0,0,0,.08),0 2px 4px rgba(0,0,0,.04);
+  --ff:'DM Sans',system-ui,sans-serif;
+  --serif:'DM Serif Display',Georgia,serif;
+  --r:8px;--rl:12px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--ff);background:var(--surface);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+
+/* ── LAYOUT ── */
+.app{display:flex;min-height:100vh}
+.sidebar{width:260px;flex-shrink:0;background:#ffffff;border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+.main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+
+/* ── SIDEBAR ── */
+.logo{padding:20px 18px 16px;border-bottom:1px solid var(--border)}
+.logo-row{display:flex;align-items:center;gap:10px}
+.logo-icon{width:36px;height:36px;background:linear-gradient(135deg,var(--accent),var(--teal));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.logo h1{font-family:var(--serif);font-size:17px;color:var(--text);font-weight:400}
+.logo span{font-size:10px;color:var(--t3);letter-spacing:.08em;text-transform:uppercase}
+.snav{padding:16px 18px 6px;font-size:10px;color:var(--t3);letter-spacing:.1em;text-transform:uppercase;font-weight:500}
+.ni-item{display:flex;align-items:center;gap:9px;padding:9px 18px;font-size:13px;color:var(--t2);cursor:pointer;transition:all .15s;border-left:3px solid transparent}
+.ni-item:hover{background:#f3f4f6;color:var(--text)}
+.ni-item.active{background:#eff6ff;color:var(--accent);border-left-color:var(--accent)}
+.ni-item .ni{font-size:15px;width:18px;text-align:center}
+.sidebar-footer{margin-top:auto;padding:14px 18px;border-top:1px solid var(--border);background:#fafafa}
+
+/* ── TOPBAR ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:13px 28px;border-bottom:1px solid var(--border);background:#ffffff;position:sticky;top:0;z-index:20;gap:12px}
+.topbar-left h2{font-family:var(--serif);font-size:18px;font-weight:400;color:var(--text)}
+.topbar-left p{font-size:11px;color:var(--t3);margin-top:1px}
+.topbar-actions{display:flex;gap:8px;flex-shrink:0}
+
+/* ── BUTTONS ── */
+button{font-family:var(--ff);cursor:pointer;border:none;transition:all .15s}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;font-size:13px;border-radius:var(--r);border:1px solid var(--bhi);background:transparent;color:var(--t2)}
+.btn:hover{background:#f3f4f6;color:var(--text)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--teal));border-color:var(--accent);color:#fff}
+.btn-primary:hover:not(:disabled){filter:brightness(1.08)}
+.btn-danger{border-color:rgba(220,38,38,.4);color:var(--red)}
+.btn-danger:hover{background:rgba(220,38,38,.08)}
+.btn-success{background:var(--teal);border-color:var(--teal);color:#fff}
+.btn-success:hover:not(:disabled){background:var(--teal-dim)}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--t2);padding:5px 10px;font-size:12px;border-radius:6px}
+.btn-ghost:hover{background:#f3f4f6;color:var(--text)}
+.btn-stop{background:transparent;border:1px solid rgba(220,38,38,.5);color:var(--red)}
+.btn-stop:hover:not(:disabled){background:rgba(220,38,38,.08);border-color:var(--red)}
+
+/* ── TABS ── */
+.tabs{display:flex;border-bottom:1px solid var(--border);padding:0 28px;background:#ffffff;overflow-x:auto;flex-shrink:0}
+.tab{padding:11px 14px;font-size:13px;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:5px;margin-bottom:-1px}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tc{display:none}.tc.active{display:flex;flex-direction:column;min-height:0;flex:1}
+.content{padding:24px 28px;flex:1;overflow-y:auto}
+
+/* ── WIZARD ── */
+.wizard-steps{display:flex;margin-bottom:28px;border-radius:var(--r);overflow:hidden;border:1px solid var(--border);background:#f3f4f6}
+.wstep{flex:1;padding:12px 8px;text-align:center;font-size:11px;color:var(--t3);background:#f7f8fa;border-right:1px solid var(--border);cursor:pointer;transition:all .2s;position:relative}
+.wstep:last-child{border-right:none}
+.wstep.active{background:#eff6ff;color:var(--accent)}
+.wstep.done{background:#f0fdf4;color:var(--teal)}
+.wstep-num{width:20px;height:20px;border-radius:50%;background:currentColor;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;margin:0 auto 4px;opacity:.5}
+.wstep.active .wstep-num{opacity:1;background:var(--accent);color:#fff}
+.wstep.done .wstep-num{opacity:1;background:var(--teal);color:#fff}
+.wizard-panel{display:none}.wizard-panel.active{display:block}
+.wizard-nav{display:flex;justify-content:space-between;align-items:center;margin-top:24px;padding-top:16px;border-top:1px solid var(--border)}
+
+/* ── FORMS ── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-full{grid-column:1/-1}
+.field{display:flex;flex-direction:column;gap:4px;position:relative}
+label{font-size:12px;color:var(--t2);font-weight:500;display:flex;align-items:center;gap:5px}
+label .req{color:var(--red)}
+input[type=text],input[type=password],input[type=number],input[type=email],select,textarea{
+  width:100%;background:#fff;border:1px solid var(--border);border-radius:var(--r);
+  padding:8px 11px;font-size:13px;color:var(--text);font-family:var(--ff);transition:border-color .15s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;padding-right:28px}
+textarea{resize:vertical;min-height:80px}
+.hint{font-size:10px;color:var(--t3);margin-top:2px}
+
+/* ── SECTION HEAD ── */
+.sh{font-size:11px;font-weight:500;color:var(--t3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:11px;margin-top:22px;padding-bottom:6px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px}
+.sh:first-child{margin-top:0}
+.divider{height:1px;background:var(--border);margin:18px 0}
+
+/* ── API KEY ── */
+.apikey-panel{background:#eff6ff;border:1px solid #bfdbfe;border-radius:var(--rl);padding:16px 20px;margin-bottom:20px}
+.apikey-header{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+.apikey-header h3{font-size:14px;font-weight:500;color:var(--text)}
+.apikey-body{display:flex;gap:8px;align-items:flex-end}
+.apikey-body .field{flex:1}
+.privacy-note{font-size:11px;color:var(--teal);margin-top:6px;display:flex;align-items:center;gap:5px}
+
+/* ── SLIDER ── */
+.slider-row{display:flex;align-items:center;gap:11px}
+.slider-row input[type=range]{flex:1;background:transparent;border:none;padding:0;accent-color:var(--accent)}
+.slider-val{font-size:13px;font-weight:500;color:var(--accent);min-width:110px;text-align:right}
+
+/* ── TOGGLE ── */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)}
+.toggle-row:last-child{border-bottom:none}
+.tl{font-size:13px;color:var(--text)}.ts{font-size:11px;color:var(--t3)}
+.tsw{width:40px;height:22px;border-radius:11px;background:#d1d5db;border:1px solid #d1d5db;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
+.tsw.on{background:linear-gradient(135deg,var(--accent),var(--teal));border-color:var(--accent)}
+.tsw::after{content:'';position:absolute;width:16px;height:16px;background:#fff;border-radius:50%;top:2px;left:2px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.tsw.on::after{left:20px}
+
+/* ── PRESETS ── */
+.presets{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px}
+.preset-card{background:#fff;border:2px solid var(--border);border-radius:var(--rl);padding:16px;cursor:pointer;transition:all .2s;text-align:center}
+.preset-card:hover{border-color:var(--bhi);box-shadow:var(--shadow-md)}
+.preset-card.selected{border-color:var(--accent);background:#eff6ff}
+.preset-icon{font-size:28px;margin-bottom:8px}
+.preset-name{font-size:14px;font-weight:500;color:var(--text);margin-bottom:4px}
+.preset-desc{font-size:11px;color:var(--t2);line-height:1.5;margin-bottom:8px}
+.preset-tags{display:flex;gap:4px;flex-wrap:wrap;justify-content:center}
+.ptag{font-size:10px;padding:2px 7px;border-radius:10px;background:#dbeafe;color:var(--accent)}
+
+/* ── UPLOAD ZONE ── */
+.upload-zone{border:2px dashed var(--border);border-radius:var(--rl);padding:32px;text-align:center;cursor:pointer;transition:all .2s;background:#fff}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--accent);background:#eff6ff}
+.upload-zone .uz-icon{font-size:36px;margin-bottom:10px}
+.upload-zone p{font-size:13px;color:var(--t2)}
+.upload-zone span{font-size:11px;color:var(--t3)}
+.file-list{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+.file-item{display:flex;align-items:center;gap:9px;padding:8px 12px;background:#fff;border:1px solid var(--border);border-radius:var(--r)}
+.file-icon{font-size:16px}
+.file-name{font-size:13px;color:var(--text);flex:1}
+.file-size{font-size:11px;color:var(--t3)}
+.file-rm{background:none;border:none;color:var(--t3);cursor:pointer;font-size:14px;padding:2px 4px;border-radius:4px}
+.file-rm:hover{color:var(--red);background:rgba(220,38,38,.08)}
+
+/* ── COST BOX ── */
+.cost-box{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:var(--r);padding:14px 18px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:20px}
+.cost-item{display:flex;flex-direction:column;gap:2px}
+.cost-val{font-size:18px;font-weight:500;color:var(--teal);font-family:var(--serif)}
+.cost-lbl{font-size:11px;color:var(--t3)}
+.cost-sep{width:1px;height:36px;background:var(--border)}
+.cost-warn{font-size:11px;color:var(--t2);flex:1;min-width:160px}
+
+/* ── PROGRESS / LOG ── */
+.progress-bar{height:6px;background:#e5e7eb;border-radius:3px;overflow:hidden;margin-bottom:6px}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--teal));border-radius:3px;transition:width .4s ease}
+.log-box{background:#111827;border-radius:var(--r);padding:14px;font-family:monospace;font-size:12px;color:#d1d5db;max-height:200px;overflow-y:auto;line-height:1.7}
+.log-box .log-line{display:flex;gap:8px}
+.log-box .log-time{color:#6b7280;flex-shrink:0}
+.log-box .log-ok{color:#34d399}
+.log-box .log-info{color:#60a5fa}
+.log-box .log-warn{color:#fbbf24}
+.log-box .log-err{color:#f87171}
+
+/* ── RESULT PANEL ── */
+.result-panel{background:#fff;border:1px solid var(--border);border-radius:var(--rl);padding:28px 32px;box-shadow:var(--shadow-md);line-height:1.85;font-size:14px;color:var(--text);position:relative}
+.result-panel h3{font-family:var(--serif);font-size:20px;font-weight:400;margin-bottom:18px;color:var(--text)}
+.result-panel p{margin-bottom:14px;text-align:justify}
+.result-panel .ref-inline{color:var(--accent);font-weight:500;cursor:pointer;font-size:12px;vertical-align:super;line-height:0}
+.result-panel .ref-inline:hover{text-decoration:underline}
+.result-meta{display:flex;gap:14px;flex-wrap:wrap;padding:12px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin-bottom:18px}
+.result-meta-item{display:flex;flex-direction:column;gap:1px}
+.result-meta-item .rm-val{font-size:15px;font-weight:500;color:var(--accent)}
+.result-meta-item .rm-lbl{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.05em}
+.ref-section{margin-top:24px;padding-top:18px;border-top:2px solid var(--border)}
+.ref-section h4{font-size:13px;font-weight:500;color:var(--t2);margin-bottom:12px;text-transform:uppercase;letter-spacing:.06em}
+.ref-item{display:flex;gap:10px;font-size:12px;color:var(--t2);margin-bottom:8px;line-height:1.6;padding:8px 10px;border-radius:6px;border:1px solid transparent}
+.ref-item:hover{background:#f7f8fa;border-color:var(--border)}
+.ref-num{font-weight:600;color:var(--accent);flex-shrink:0;width:24px}
+.ref-body a{color:var(--accent);text-decoration:none}
+.ref-body a:hover{text-decoration:underline}
+
+/* ── BADGE ── */
+.badge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:8px;font-weight:500}
+.b-blue{background:rgba(37,99,235,.1);color:var(--accent)}
+.b-green{background:rgba(5,150,105,.1);color:var(--teal)}
+.b-amber{background:rgba(217,119,6,.1);color:var(--amber)}
+.b-red{background:rgba(220,38,38,.1);color:var(--red)}
+.b-purple{background:rgba(124,58,237,.1);color:var(--purple)}
+
+/* ── TOOLTIP ── */
+.tooltip-wrap{position:relative;display:inline-flex;align-items:center}
+.tip-icon{width:15px;height:15px;border-radius:50%;background:#f3f4f6;border:1px solid var(--border);font-size:9px;color:var(--t3);display:inline-flex;align-items:center;justify-content:center;cursor:help;flex-shrink:0}
+.tip-icon:hover{border-color:var(--accent);color:var(--accent)}
+.tip-box{position:absolute;left:20px;top:-4px;background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--t2);width:220px;z-index:100;line-height:1.5;display:none;box-shadow:var(--shadow-md)}
+.tooltip-wrap:hover .tip-box{display:block}
+
+/* ── ALERT ── */
+.alert{border-radius:var(--r);padding:12px 16px;font-size:13px;margin-bottom:16px;display:flex;gap:10px;align-items:flex-start}
+.alert-info{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af}
+.alert-warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e}
+.alert-err{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}
+.alert-ok{background:#f0fdf4;border:1px solid #bbf7d0;color:#065f46}
+
+/* ── QUALITY METER ── */
+.quality-bar{display:flex;gap:3px;align-items:center;margin-top:4px}
+.qb-seg{width:18px;height:5px;border-radius:2px;background:#e5e7eb}
+.qb-seg.fill-green{background:#10b981}
+.qb-seg.fill-amber{background:#f59e0b}
+.qb-seg.fill-red{background:#ef4444}
+
+/* ── HISTORY ── */
+.hist-item{display:flex;align-items:center;gap:12px;padding:12px 14px;background:#fff;border:1px solid var(--border);border-radius:var(--r);cursor:pointer;transition:all .15s;margin-bottom:8px}
+.hist-item:hover{border-color:var(--accent);background:#eff6ff}
+.hist-icon{font-size:22px;flex-shrink:0}
+.hist-title{font-size:13px;font-weight:500;color:var(--text)}
+.hist-meta{font-size:11px;color:var(--t3);margin-top:2px}
+.hist-actions{margin-left:auto;display:flex;gap:6px}
+
+/* ── ONBOARDING ── */
+.onboard-overlay{position:fixed;inset:0;background:rgba(17,24,39,.65);z-index:1000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
+.onboard-box{background:#fff;border:1px solid var(--border);box-shadow:var(--shadow-md);border-radius:20px;padding:40px;max-width:540px;width:90%;text-align:center}
+.onboard-icon{font-size:52px;margin-bottom:16px}
+.onboard-box h2{font-family:var(--serif);font-size:24px;font-weight:400;margin-bottom:8px}
+.onboard-box p{font-size:14px;color:var(--t2);line-height:1.7;margin-bottom:24px}
+.onboard-steps{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:28px;text-align:left}
+.ostep{background:#eff6ff;border:1px solid #bfdbfe;border-radius:var(--r);padding:14px}
+.ostep-icon{font-size:22px;margin-bottom:6px}
+.ostep-title{font-size:13px;font-weight:500;color:var(--text);margin-bottom:3px}
+.ostep-desc{font-size:11px;color:var(--t2);line-height:1.5}
+
+/* ── COPY FLASH ── */
+@keyframes flash{0%{opacity:1}50%{opacity:.5}100%{opacity:1}}
+.flash{animation:flash .4s}
+
+/* ── THINKING INDICATOR ── */
+.thinking{display:flex;align-items:center;gap:12px;padding:16px;background:#f7f8fa;border-radius:var(--r);margin-bottom:14px}
+.thinking-dots{display:flex;gap:4px}
+.thinking-dots span{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:dot .9s infinite}
+.thinking-dots span:nth-child(2){animation-delay:.2s}
+.thinking-dots span:nth-child(3){animation-delay:.4s}
+@keyframes dot{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
+
+/* ── DARK MODE (Mejora 6) ── */
+body.dark{
+  --surface:#0f172a;--s2:#1e293b;--s3:#1e293b;
+  --border:#334155;--bhi:#475569;
+  --text:#f1f5f9;--t2:#94a3b8;--t3:#64748b;
+  --shadow:0 1px 3px rgba(0,0,0,.3);
+  --shadow-md:0 4px 16px rgba(0,0,0,.4);
+}
+body.dark .sidebar,body.dark .topbar,body.dark .tabs{background:#1e293b}
+body.dark .logo,body.dark .sidebar-footer{background:#1e293b}
+body.dark .ni-item.active{background:#1e3a5f}
+body.dark input,body.dark select,body.dark textarea{background:#0f172a;color:#f1f5f9;border-color:#334155}
+body.dark .preset-card,body.dark .result-panel,body.dark .at-wrap,body.dark .hist-item{background:#1e293b;border-color:#334155}
+body.dark .preset-card.selected{background:#1e3a5f;border-color:var(--accent)}
+body.dark .sc{background:#1e293b}
+body.dark .log-box{background:#020617}
+body.dark .apikey-panel{background:#1e3a5f;border-color:#2563eb44}
+body.dark .upload-zone{background:#1e293b;border-color:#334155}
+body.dark .upload-zone:hover{background:#1e3a5f}
+body.dark .onboard-box{background:#1e293b}
+body.dark .cost-box{background:#052e16;border-color:#166534}
+body.dark .alert-info{background:#1e3a5f;border-color:#1d4ed8;color:#bfdbfe}
+body.dark .alert-ok{background:#052e16;border-color:#166534;color:#bbf7d0}
+body.dark .alert-warn{background:#451a03;border-color:#78350f;color:#fde68a}
+
+/* ── CITATION HEATMAP (Mejora 3) ── */
+.heatmap-on .sent-meta{background:rgba(16,185,129,.15);border-left:3px solid #10b981;padding-left:6px;border-radius:0 4px 4px 0}
+.heatmap-on .sent-rct{background:rgba(37,99,235,.12);border-left:3px solid var(--accent);padding-left:6px;border-radius:0 4px 4px 0}
+.heatmap-on .sent-obs{background:rgba(217,119,6,.12);border-left:3px solid var(--amber);padding-left:6px;border-radius:0 4px 4px 0}
+
+/* ── REF TOOLTIP ON HOVER (Mejora 10) ── */
+.ref-inline{position:relative}
+.ref-tooltip{display:none;position:absolute;bottom:120%;left:50%;transform:translateX(-50%);background:#1e293b;color:#f1f5f9;font-size:11px;padding:8px 11px;border-radius:8px;width:260px;line-height:1.5;z-index:200;box-shadow:0 4px 20px rgba(0,0,0,.3);pointer-events:none;font-family:var(--ff);font-weight:400}
+.ref-tooltip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:#1e293b}
+.ref-inline:hover .ref-tooltip{display:block}
+
+/* ── EVIDENCE PYRAMID (Mejora 7) ── */
+.evidence-pyramid{display:flex;flex-direction:column;align-items:center;gap:3px;padding:16px 0}
+.pyr-level{display:flex;align-items:center;justify-content:center;border-radius:4px;font-size:11px;font-weight:500;color:#fff;gap:6px;transition:all .2s}
+.pyr-level:hover{filter:brightness(1.15)}
+
+/* ── COMPLIANCE BADGE (Mejora 4) ── */
+.compliance-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:500}
+.cb-ok{background:#f0fdf4;border:1px solid #bbf7d0;color:#065f46}
+.cb-warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e}
+.cb-err{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}
+
+/* ── PICO EXTRACTOR (Mejora 2) ── */
+.pico-box{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:var(--r);margin-top:10px}
+.pico-item{font-size:12px}
+.pico-label{font-weight:600;color:var(--teal);font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+
+/* ── KEYBOARD SHORTCUT CHIP (Mejora 9) ── */
+.kbd{display:inline-flex;align-items:center;justify-content:center;padding:1px 6px;border-radius:4px;font-size:10px;font-family:monospace;background:#f3f4f6;border:1px solid #d1d5db;color:var(--t2)}
+body.dark .kbd{background:#334155;border-color:#475569;color:#94a3b8}
+.shortcut-grid{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;align-items:center;font-size:12px}
+
+/* ── STREAMING CURSOR (Mejora 1) ── */
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.stream-cursor{display:inline-block;width:2px;height:1em;background:var(--accent);animation:blink .8s infinite;vertical-align:text-bottom;margin-left:1px}
+
+/* ── PRINT / PDF (Mejora 5) ── */
+@media print{
+  .sidebar,.topbar,.tabs,.wizard-steps,.wizard-nav,.topbar-actions,
+  .result-meta,#gen-progress,.btn,.alert,.sh,.adv-toggle,
+  .log-box,.cost-box,.pico-box{display:none!important}
+  body{background:#fff!important;color:#000!important;font-size:12pt}
+  .app{display:block}
+  .main{display:block}
+  .tc{display:block!important}
+  .content{padding:0}
+  .result-panel{border:none;box-shadow:none;padding:0;font-size:12pt;line-height:1.9}
+  .ref-section{margin-top:18pt}
+  .ref-item{page-break-inside:avoid}
+  @page{margin:2.5cm}
+}
+
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  .sidebar{display:none}
+  .presets{grid-template-columns:1fr}
+  .form-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ONBOARDING OVERLAY -->
+<div class="onboard-overlay" id="onboard">
+  <div class="onboard-box">
+    <div class="onboard-icon">🔬</div>
+    <h2>IntroGen — Introducciones Científicas con IA</h2>
+    <p>Genera introducciones académicas rigurosas en minutos. Sube tu manuscrito, define los parámetros de la revista y recibe una introducción con referencias reales, citadas afirmación por afirmación.</p>
+    <div class="onboard-steps">
+      <div class="ostep"><div class="ostep-icon">📄</div><div class="ostep-title">Sube tu manuscrito</div><div class="ostep-desc">Métodos y resultados en PDF, Word o texto</div></div>
+      <div class="ostep"><div class="ostep-icon">⚙️</div><div class="ostep-title">Define parámetros</div><div class="ostep-desc">Normas de la revista: extensión, referencias, estilo</div></div>
+      <div class="ostep"><div class="ostep-icon">✨</div><div class="ostep-title">Recibe introducción</div><div class="ostep-desc">Texto citado afirmación a afirmación con DOI</div></div>
+    </div>
+    <div class="field" style="margin-bottom:16px;text-align:left">
+      <label>🔑 OpenAI API Key <span class="req">*</span></label>
+      <input type="password" id="ob-key" placeholder="sk-..." autocomplete="off">
+      <div class="hint">Tu clave nunca sale de tu navegador. Las llamadas van directamente a api.openai.com</div>
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:11px" onclick="startApp()">Comenzar →</button>
+  </div>
+</div>
+
+<div class="app" id="app" style="display:none">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-row">
+        <div class="logo-icon">🔬</div>
+        <div>
+          <h1>IntroGen</h1>
+          <span>Scientific Intro AI</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="snav">Módulos</div>
+    <div class="ni-item active" onclick="switchTab('generator')"><span class="ni">✍️</span>Generador</div>
+    <div class="ni-item" onclick="switchTab('history')"><span class="ni">📚</span>Historial</div>
+    <div class="ni-item" onclick="switchTab('settings')"><span class="ni">⚙️</span>Configuración</div>
+    <div class="ni-item" onclick="switchTab('help')"><span class="ni">❓</span>Guía de uso</div>
+
+    <div class="snav">Recursos</div>
+    <div class="ni-item" onclick="switchTab('journals')"><span class="ni">📖</span>Normas de revistas</div>
+    <div class="ni-item" onclick="switchTab('prompts')"><span class="ni">💬</span>Plantillas de prompt</div>
+
+    <div class="sidebar-footer">
+      <div style="font-size:11px;color:var(--t3);margin-bottom:4px">Modelo activo</div>
+      <div style="font-size:13px;color:var(--text);font-weight:500" id="model-display">gpt-4o</div>
+      <div style="font-size:10px;color:var(--t3);margin-top:2px">Clave: <span id="key-display">sk-...configurada</span></div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <h2 id="page-title">Generador de Introducciones</h2>
+        <p id="page-sub">Completa los pasos del asistente para generar tu introducción científica</p>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn" onclick="toggleDark()" id="dark-btn" title="Modo oscuro (Alt+D)">🌙</button>
+        <button class="btn" onclick="showShortcuts()" title="Atajos de teclado (?)" style="font-size:12px">⌨️</button>
+        <button class="btn" onclick="resetWizard()">🔄 Nueva sesión</button>
+        <button class="btn btn-primary" id="main-gen-btn" onclick="jumpToGenerate()">⚡ Generar ahora</button>
+      </div>
+    </div>
+
+    <!-- TABS CONTENT -->
+    <div class="tabs">
+      <div class="tab active" data-tab="generator" onclick="switchTab('generator')">✍️ Generador</div>
+      <div class="tab" data-tab="history" onclick="switchTab('history')">📚 Historial</div>
+      <div class="tab" data-tab="settings" onclick="switchTab('settings')">⚙️ Configuración</div>
+      <div class="tab" data-tab="help" onclick="switchTab('help')">❓ Guía</div>
+      <div class="tab" data-tab="journals" onclick="switchTab('journals')">📖 Revistas</div>
+      <div class="tab" data-tab="prompts" onclick="switchTab('prompts')">💬 Plantillas</div>
+    </div>
+
+    <!-- ══ TAB: GENERADOR ══ -->
+    <div class="tc active" id="tc-generator">
+      <div class="content">
+
+        <!-- WIZARD STEPS -->
+        <div class="wizard-steps">
+          <div class="wstep active" id="ws1" onclick="goWizard(1)">
+            <div class="wstep-num">1</div>Tema y manuscrito
+          </div>
+          <div class="wstep" id="ws2" onclick="goWizard(2)">
+            <div class="wstep-num">2</div>Parámetros de revista
+          </div>
+          <div class="wstep" id="ws3" onclick="goWizard(3)">
+            <div class="wstep-num">3</div>Fuentes y búsqueda
+          </div>
+          <div class="wstep" id="ws4" onclick="goWizard(4)">
+            <div class="wstep-num">4</div>Generar
+          </div>
+          <div class="wstep" id="ws5" onclick="goWizard(5)">
+            <div class="wstep-num">5</div>Resultado
+          </div>
+        </div>
+
+        <!-- ─ PANEL 1: Tema y manuscrito ─ -->
+        <div class="wizard-panel active" id="wp1">
+          <div class="sh">🎯 Tema del artículo</div>
+          <div class="form-grid">
+            <div class="field form-full">
+              <label>Título provisional o tema de investigación <span class="req">*</span></label>
+              <input type="text" id="p1-title" placeholder="Ej: Eficacia de la terapia cognitivo-conductual en el trastorno de ansiedad generalizada en adultos mayores">
+              <div class="hint">Cuanto más específico, mejores referencias encontraremos</div>
+            </div>
+            <div class="field">
+              <label>Área de conocimiento <span class="req">*</span></label>
+              <select id="p1-area">
+                <option value="">Seleccionar...</option>
+                <option>Medicina clínica</option>
+                <option>Salud pública y epidemiología</option>
+                <option>Psicología</option>
+                <option>Neurociencia</option>
+                <option>Farmacología</option>
+                <option>Biología molecular</option>
+                <option>Oncología</option>
+                <option>Cardiología</option>
+                <option>Nutrición y dietética</option>
+                <option>Fisioterapia y rehabilitación</option>
+                <option>Ciencias de la enfermería</option>
+                <option>Salud mental</option>
+                <option>Biotecnología</option>
+                <option>Ingeniería biomédica</option>
+                <option>Otro</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Tipo de estudio</label>
+              <select id="p1-study">
+                <option value="">Seleccionar...</option>
+                <option>Ensayo clínico aleatorizado</option>
+                <option>Estudio observacional cohorte</option>
+                <option>Estudio transversal</option>
+                <option>Estudio caso-control</option>
+                <option>Revisión sistemática / Meta-análisis</option>
+                <option>Estudio piloto</option>
+                <option>Investigación básica / experimental</option>
+                <option>Investigación cualitativa</option>
+                <option>Revisión narrativa</option>
+              </select>
+            </div>
+            <div class="field form-full">
+              <label>Hipótesis principal o pregunta de investigación</label>
+              <textarea id="p1-hypothesis" placeholder="Ej: Hipotetizamos que la TCC grupal en formato telemático reduce significativamente los síntomas de ansiedad generalizada en mayores de 65 años, medida por la escala GAD-7..."></textarea>
+            </div>
+            <div class="field form-full">
+              <label>Palabras clave (separadas por coma)</label>
+              <input type="text" id="p1-keywords" placeholder="Ej: anxiety disorder, elderly, cognitive behavioral therapy, telepsychology">
+              <div class="hint">Usa términos MeSH cuando sea posible para mejorar la búsqueda</div>
+            </div>
+          </div>
+
+          <!-- MEJORA 2: Extractor PICO automático -->
+          <div style="margin-top:16px;padding:14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:var(--r)">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <div style="font-size:12px;font-weight:500;color:var(--teal)">🔬 Extractor PICO automático</div>
+              <button class="btn btn-success" style="font-size:11px;padding:5px 10px" onclick="extractPICO()">Extraer PICO del manuscrito</button>
+            </div>
+            <div style="font-size:11px;color:var(--t2)">Analiza el manuscrito pegado o subido para identificar Population · Intervention · Comparator · Outcome</div>
+            <div id="pico-result" style="display:none" class="pico-box">
+              <div class="pico-item"><div class="pico-label">P · Population</div><div id="pico-p">–</div></div>
+              <div class="pico-item"><div class="pico-label">I · Intervention</div><div id="pico-i">–</div></div>
+              <div class="pico-item"><div class="pico-label">C · Comparator</div><div id="pico-c">–</div></div>
+              <div class="pico-item"><div class="pico-label">O · Outcome</div><div id="pico-o">–</div></div>
+            </div>
+          </div>
+
+          <div class="sh" style="margin-top:24px">📄 Manuscrito (opcional pero recomendado)</div>
+          <div class="alert alert-info" style="margin-bottom:14px">
+            <span>💡</span>
+            <span>Sube tu sección de Material y Métodos y/o Resultados. La IA los analizará para entender el contexto exacto del estudio y generar una introducción coherente con tu investigación.</span>
+          </div>
+          <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()" ondragover="handleDrag(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+            <div class="uz-icon">📂</div>
+            <p>Arrastra aquí tu manuscrito o haz clic para seleccionar</p>
+            <span>PDF, Word (.docx), TXT — máx. 10 MB</span>
+            <input type="file" id="file-input" style="display:none" accept=".pdf,.docx,.doc,.txt" multiple onchange="handleFiles(event)">
+          </div>
+          <div class="file-list" id="file-list"></div>
+
+          <div class="sh" style="margin-top:20px">📝 Texto directo (alternativa a archivo)</div>
+          <div class="field">
+            <label>Pega aquí tu Material y Métodos / Resultados</label>
+            <textarea id="p1-text" style="min-height:120px" placeholder="Pega aquí el texto de tu manuscrito. La IA identificará la intervención, la población, los endpoints y el contexto clínico para orientar la búsqueda bibliográfica..."></textarea>
+          </div>
+
+          <div class="wizard-nav">
+            <div></div>
+            <button class="btn btn-primary" onclick="goWizard(2)">Siguiente: Parámetros →</button>
+          </div>
+        </div>
+
+        <!-- ─ PANEL 2: Parámetros de revista ─ -->
+        <div class="wizard-panel" id="wp2">
+          <div class="sh">📖 Selecciona un perfil de revista (o personaliza)</div>
+
+          <div class="presets" id="journal-presets">
+            <div class="preset-card selected" data-preset="lancet" onclick="selectJournalPreset(this,'lancet')">
+              <div class="preset-icon">🏥</div>
+              <div class="preset-name">The Lancet / NEJM</div>
+              <div class="preset-desc">Revistas de alto impacto en medicina clínica</div>
+              <div class="preset-tags"><span class="ptag">250–400 palabras</span><span class="ptag">15–25 refs</span><span class="ptag">Vancouver</span></div>
+            </div>
+            <div class="preset-card" data-preset="plos" onclick="selectJournalPreset(this,'plos')">
+              <div class="preset-icon">🔓</div>
+              <div class="preset-name">PLOS ONE / BMJ Open</div>
+              <div class="preset-desc">Acceso abierto, enfoque metodológico</div>
+              <div class="preset-tags"><span class="ptag">300–500 palabras</span><span class="ptag">20–30 refs</span><span class="ptag">Vancouver</span></div>
+            </div>
+            <div class="preset-card" data-preset="nature" onclick="selectJournalPreset(this,'nature')">
+              <div class="preset-icon">🌿</div>
+              <div class="preset-name">Nature / Science</div>
+              <div class="preset-desc">Investigación básica de alto impacto</div>
+              <div class="preset-tags"><span class="ptag">200–350 palabras</span><span class="ptag">10–20 refs</span><span class="ptag">Autor-año</span></div>
+            </div>
+            <div class="preset-card" data-preset="systematic" onclick="selectJournalPreset(this,'systematic')">
+              <div class="preset-icon">🔍</div>
+              <div class="preset-name">Revisión sistemática</div>
+              <div class="preset-desc">Cochrane, PROSPERO, revisiones y meta-análisis</div>
+              <div class="preset-tags"><span class="ptag">400–600 palabras</span><span class="ptag">25–40 refs</span><span class="ptag">Vancouver</span></div>
+            </div>
+            <div class="preset-card" data-preset="speciality" onclick="selectJournalPreset(this,'speciality')">
+              <div class="preset-icon">🎯</div>
+              <div class="preset-name">Revista de especialidad</div>
+              <div class="preset-desc">Journals específicos de la disciplina</div>
+              <div class="preset-tags"><span class="ptag">300–500 palabras</span><span class="ptag">15–30 refs</span><span class="ptag">APA / Vancouver</span></div>
+            </div>
+            <div class="preset-card" data-preset="custom" onclick="selectJournalPreset(this,'custom')">
+              <div class="preset-icon">⚙️</div>
+              <div class="preset-name">Personalizado</div>
+              <div class="preset-desc">Define tus propios parámetros</div>
+              <div class="preset-tags"><span class="ptag">Libre</span></div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+          <div class="sh">⚙️ Parámetros detallados</div>
+          <div class="form-grid">
+            <div class="field">
+              <label>Nombre de la revista (opcional)</label>
+              <input type="text" id="p2-journal" placeholder="Ej: JAMA Internal Medicine">
+            </div>
+            <div class="field">
+              <label>Idioma de la introducción <span class="req">*</span></label>
+              <select id="p2-lang">
+                <option value="es">Español</option>
+                <option value="en" selected>English</option>
+                <option value="fr">Français</option>
+                <option value="pt">Português</option>
+                <option value="it">Italiano</option>
+                <option value="de">Deutsch</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Estilo de citación <span class="req">*</span></label>
+              <select id="p2-style">
+                <option value="vancouver">Vancouver (numérico)</option>
+                <option value="apa">APA (autor, año)</option>
+                <option value="harvard">Harvard</option>
+                <option value="chicago">Chicago</option>
+                <option value="mla">MLA</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Número máximo de referencias</label>
+              <div class="slider-row">
+                <input type="range" min="5" max="60" value="20" id="p2-refs" oninput="document.getElementById('p2-refs-val').textContent=this.value+' referencias'">
+                <div class="slider-val" id="p2-refs-val">20 referencias</div>
+              </div>
+            </div>
+            <div class="field form-full">
+              <label>Extensión de la introducción</label>
+              <div class="slider-row">
+                <input type="range" min="100" max="1000" step="50" value="350" id="p2-words" oninput="document.getElementById('p2-words-val').textContent=this.value+' palabras (~'+Math.round(this.value/250)+' pág.)'">
+                <div class="slider-val" id="p2-words-val">350 palabras (~1 pág.)</div>
+              </div>
+            </div>
+            <div class="field form-full">
+              <label>Período temporal de las referencias</label>
+              <div class="slider-row">
+                <input type="range" min="1" max="20" value="10" id="p2-years" oninput="document.getElementById('p2-years-val').textContent='Últimos '+this.value+' años ('+(2025-parseInt(this.value))+'-2025)'">
+                <div class="slider-val" id="p2-years-val">Últimos 10 años (2015-2025)</div>
+              </div>
+            </div>
+            <div class="field">
+              <label>Antigüedad mínima permitida para refs seminales</label>
+              <select id="p2-seminal">
+                <option>Sin restricción (incluir clásicos)</option>
+                <option>Máx. 15 años</option>
+                <option>Máx. 10 años</option>
+                <option>Máx. 5 años (solo recientes)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Tono de escritura</label>
+              <select id="p2-tone">
+                <option value="academic">Académico formal</option>
+                <option value="clinical">Clínico práctico</option>
+                <option value="concise">Conciso y directo</option>
+                <option value="narrative">Narrativo (revisión)</option>
+              </select>
+            </div>
+            <div class="field form-full">
+              <label>Instrucciones adicionales para la revista</label>
+              <textarea id="p2-notes" placeholder="Ej: Esta revista requiere que la introducción termine con el objetivo del estudio. No usar más de 3 niveles de encabezado. Los ensayos clínicos deben citar el número de registro..."></textarea>
+            </div>
+          </div>
+
+          <div class="wizard-nav">
+            <button class="btn" onclick="goWizard(1)">← Anterior</button>
+            <button class="btn btn-primary" onclick="goWizard(3)">Siguiente: Fuentes →</button>
+          </div>
+        </div>
+
+        <!-- ─ PANEL 3: Fuentes y búsqueda ─ -->
+        <div class="wizard-panel" id="wp3">
+          <div class="sh">🗃️ Bases de datos a consultar</div>
+          <div class="alert alert-info" style="margin-bottom:16px">
+            <span>🔍</span><span>La IA formulará queries específicas para cada base de datos, priorizando estudios primarios de alta calidad y revisiones sistemáticas relevantes para tu pregunta de investigación.</span>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px" id="db-grid">
+            <!-- generado por JS -->
+          </div>
+
+          <div class="sh">🎛️ Estrategia de búsqueda</div>
+          <div class="form-grid">
+            <div class="field">
+              <label>Prioridad de evidencia</label>
+              <select id="p3-evidence">
+                <option value="meta">Meta-análisis y revisiones sistemáticas primero</option>
+                <option value="rct">Ensayos clínicos aleatorizados primero</option>
+                <option value="observational">Estudios observacionales</option>
+                <option value="mixed" selected>Mezcla equilibrada (recomendado)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Profundidad de búsqueda</label>
+              <select id="p3-depth">
+                <option value="fast">Rápida (~2 min, 30-50 artículos)</option>
+                <option value="standard" selected>Estándar (~5 min, 80-120 artículos)</option>
+                <option value="deep">Exhaustiva (~12 min, 200+ artículos)</option>
+              </select>
+            </div>
+            <div class="field form-full">
+              <label>Términos de búsqueda adicionales (opcional)</label>
+              <input type="text" id="p3-extra" placeholder="Ej: -systematic review -meta-analysis (excluir) OR +randomized (incluir)">
+              <div class="hint">Usa + para incluir forzosamente y - para excluir términos</div>
+            </div>
+          </div>
+
+          <div class="sh">🤖 Agentes de análisis activos</div>
+          <div style="background:#fff;border:1px solid var(--border);border-radius:var(--r);overflow:hidden">
+            <table style="width:100%;border-collapse:collapse;font-size:12px">
+              <thead>
+                <tr style="background:#f7f8fa">
+                  <th style="padding:8px 12px;text-align:left;color:var(--t3);font-weight:500;border-bottom:1px solid var(--border)">Agente</th>
+                  <th style="padding:8px 12px;text-align:left;color:var(--t3);font-weight:500;border-bottom:1px solid var(--border)">Función</th>
+                  <th style="padding:8px 12px;text-align:center;color:var(--t3);font-weight:500;border-bottom:1px solid var(--border)">Activar</th>
+                </tr>
+              </thead>
+              <tbody id="agents-table"></tbody>
+            </table>
+          </div>
+
+          <div class="wizard-nav">
+            <button class="btn" onclick="goWizard(2)">← Anterior</button>
+            <button class="btn btn-primary" onclick="goWizard(4)">Siguiente: Revisar →</button>
+          </div>
+        </div>
+
+        <!-- ─ PANEL 4: Generar ─ -->
+        <div class="wizard-panel" id="wp4">
+          <div class="sh">📋 Resumen de configuración</div>
+          <div id="config-summary" style="background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:16px;font-size:13px;line-height:2"></div>
+
+          <div class="cost-box" id="cost-box">
+            <div class="cost-item"><div class="cost-val" id="est-time">~4 min</div><div class="cost-lbl">Tiempo estimado</div></div>
+            <div class="cost-sep"></div>
+            <div class="cost-item"><div class="cost-val" id="est-cost">~$0.08</div><div class="cost-lbl">Coste estimado</div></div>
+            <div class="cost-sep"></div>
+            <div class="cost-item"><div class="cost-val" id="est-refs">~20</div><div class="cost-lbl">Referencias objetivo</div></div>
+            <div class="cost-sep"></div>
+            <div class="cost-warn">Las llamadas van directamente desde tu navegador a api.openai.com. IntroGen no almacena ni procesa tu texto ni tu clave.</div>
+          </div>
+
+          <div class="sh">🤖 Modelo de IA</div>
+          <div class="form-grid">
+            <div class="field">
+              <label>Modelo OpenAI</label>
+              <select id="p4-model" onchange="updateModelDisplay()">
+                <option value="gpt-4o">GPT-4o (recomendado — mejor calidad)</option>
+                <option value="gpt-4o-mini">GPT-4o mini (rápido y económico)</option>
+                <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                <option value="o1-preview">o1-preview (razonamiento avanzado)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Temperatura (creatividad)</label>
+              <div class="slider-row">
+                <input type="range" min="0" max="10" value="3" id="p4-temp" oninput="document.getElementById('p4-temp-val').textContent=(parseInt(this.value)/10).toFixed(1)">
+                <div class="slider-val" id="p4-temp-val">0.3</div>
+              </div>
+              <div class="hint">0 = determinista · 1 = muy creativo</div>
+            </div>
+          </div>
+
+          <div class="sh">🔧 Opciones avanzadas</div>
+          <div class="toggle-row">
+            <div><div class="tl">Verificar DOIs automáticamente</div><div class="ts">Comprueba que cada referencia es válida y accesible</div></div>
+            <div class="tsw on" id="tog-doi" onclick="toggleSw(this)"></div>
+          </div>
+          <div class="toggle-row">
+            <div><div class="tl">Incluir referencias seminales históricas</div><div class="ts">Añade estudios fundacionales aunque sean anteriores al período definido</div></div>
+            <div class="tsw on" id="tog-seminal" onclick="toggleSw(this)"></div>
+          </div>
+          <div class="toggle-row">
+            <div><div class="tl">Detectar y evitar citar retractados</div><div class="ts">Filtra artículos retirados de las principales bases de datos</div></div>
+            <div class="tsw on" id="tog-retract" onclick="toggleSw(this)"></div>
+          </div>
+          <div class="toggle-row">
+            <div><div class="tl">Generar keywords MeSH sugeridas</div><div class="ts">Lista de términos MeSH relevantes para el indexado</div></div>
+            <div class="tsw" id="tog-mesh" onclick="toggleSw(this)"></div>
+          </div>
+          <div class="toggle-row">
+            <div><div class="tl">Exportar lista de referencias en BibTeX</div><div class="ts">Genera fichero .bib compatible con LaTeX / Zotero</div></div>
+            <div class="tsw" id="tog-bibtex" onclick="toggleSw(this)"></div>
+          </div>
+          <!-- MEJORA 1: Streaming -->
+          <div class="toggle-row">
+            <div><div class="tl">✨ Streaming (escritura en tiempo real)</div><div class="ts">El texto aparece token a token mientras la IA lo genera</div></div>
+            <div class="tsw on" id="tog-stream" onclick="toggleSw(this)"></div>
+          </div>
+          <!-- MEJORA 8: Versiones alternativas -->
+          <div class="toggle-row">
+            <div><div class="tl">🔀 Generar versiones alternativas</div><div class="ts">Genera 2 variantes adicionales para que elijas la mejor</div></div>
+            <div class="tsw" id="tog-alts" onclick="toggleSw(this)"></div>
+          </div>
+
+          <div class="wizard-nav">
+            <button class="btn" onclick="goWizard(3)">← Anterior</button>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-stop" id="stop-btn" onclick="stopGeneration()" disabled>⏹ Parar</button>
+              <button class="btn btn-primary" id="gen-btn" onclick="startGeneration()">⚡ Generar introducción</button>
+            </div>
+          </div>
+
+          <!-- PROGRESS -->
+          <div id="gen-progress" style="display:none;margin-top:20px">
+            <div class="sh">⚙️ Progreso</div>
+            <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+            <div style="font-size:11px;color:var(--t3);margin-bottom:12px" id="progress-label">Iniciando...</div>
+            <div class="log-box" id="log-box"></div>
+          </div>
+        </div>
+
+        <!-- ─ PANEL 5: Resultado ─ -->
+        <div class="wizard-panel" id="wp5">
+          <div id="result-container"></div>
+        </div>
+
+      </div><!-- /content -->
+    </div><!-- /tc-generator -->
+
+    <!-- ══ TAB: HISTORIAL ══ -->
+    <div class="tc" id="tc-history">
+      <div class="content">
+        <div class="sh">📚 Introducciones generadas</div>
+        <div id="history-list">
+          <div style="text-align:center;padding:48px;color:var(--t3)">
+            <div style="font-size:36px;margin-bottom:12px">📭</div>
+            <div>Aún no has generado ninguna introducción</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TAB: CONFIGURACIÓN ══ -->
+    <div class="tc" id="tc-settings">
+      <div class="content">
+        <div class="sh">🔑 Credenciales</div>
+        <div class="apikey-panel">
+          <div class="apikey-header"><span style="font-size:20px">🔑</span><h3>OpenAI API Key</h3></div>
+          <div class="apikey-body">
+            <div class="field"><input type="password" id="cfg-key" placeholder="sk-..." autocomplete="off"></div>
+            <button class="btn btn-success" onclick="saveKey()">💾 Guardar</button>
+          </div>
+          <div class="privacy-note">🔒 Tu clave se guarda solo en localStorage de este navegador. Nunca se envía a ningún servidor de IntroGen.</div>
+        </div>
+
+        <div class="sh">🎛️ Preferencias globales</div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Modelo por defecto</label>
+            <select id="cfg-model" onchange="document.getElementById('model-display').textContent=this.value">
+              <option value="gpt-4o">GPT-4o</option>
+              <option value="gpt-4o-mini">GPT-4o mini</option>
+              <option value="gpt-4-turbo">GPT-4 Turbo</option>
+              <option value="o1-preview">o1-preview</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Idioma de interfaz</label>
+            <select>
+              <option>Español</option>
+              <option>English</option>
+            </select>
+          </div>
+        </div>
+        <div class="toggle-row" style="margin-top:12px">
+          <div><div class="tl">Guardar historial localmente</div><div class="ts">Las introducciones generadas se guardan en tu navegador</div></div>
+          <div class="tsw on" onclick="toggleSw(this)"></div>
+        </div>
+        <div class="toggle-row">
+          <div><div class="tl">Mostrar estimación de coste</div><div class="ts">Muestra el coste aproximado en USD antes de generar</div></div>
+          <div class="tsw on" onclick="toggleSw(this)"></div>
+        </div>
+        <div class="toggle-row">
+          <div><div class="tl">Verificación automática de DOIs</div><div class="ts">Comprueba la validez de las referencias generadas</div></div>
+          <div class="tsw on" onclick="toggleSw(this)"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TAB: GUÍA ══ -->
+    <div class="tc" id="tc-help">
+      <div class="content">
+        <div class="sh">❓ Cómo usar IntroGen</div>
+        <div style="display:grid;gap:14px">
+          <div class="alert alert-info"><span>1️⃣</span><div><strong>Paso 1 — Tema y manuscrito:</strong> Introduce el título o tema de tu investigación. Sube (o pega) tu sección de Material y Métodos / Resultados para que la IA entienda exactamente qué investiga tu artículo y qué necesita justificar en la introducción.</div></div>
+          <div class="alert alert-info"><span>2️⃣</span><div><strong>Paso 2 — Parámetros de revista:</strong> Selecciona un perfil de revista predefinido o personaliza la extensión, el número de referencias, el estilo de citación (Vancouver, APA, etc.) y el período temporal de las fuentes.</div></div>
+          <div class="alert alert-info"><span>3️⃣</span><div><strong>Paso 3 — Fuentes:</strong> Selecciona qué bases de datos consultar (PubMed, Cochrane, Embase, etc.) y configura los agentes de análisis que procesarán la evidencia encontrada.</div></div>
+          <div class="alert alert-info"><span>4️⃣</span><div><strong>Paso 4 — Generar:</strong> Revisa el resumen de configuración y el coste estimado. Pulsa "Generar introducción" y observa el progreso en tiempo real.</div></div>
+          <div class="alert alert-ok"><span>5️⃣</span><div><strong>Resultado:</strong> La introducción aparece citada afirmación por afirmación. Haz clic en cualquier número de referencia para ver los detalles. Exporta en Word, PDF o copia el texto con referencias.</div></div>
+        </div>
+
+        <div class="sh" style="margin-top:24px">💡 Consejos para mejores resultados</div>
+        <div style="display:grid;gap:10px;font-size:13px;color:var(--t2)">
+          <div style="padding:12px;background:#fff;border:1px solid var(--border);border-radius:var(--r)">📌 <strong>Sé específico con el tema:</strong> "Insulinorresistencia en adolescentes con obesidad tratados con metformina" dará mejores resultados que "diabetes en jóvenes".</div>
+          <div style="padding:12px;background:#fff;border:1px solid var(--border);border-radius:var(--r)">📌 <strong>Usa términos MeSH:</strong> Incluir los términos MeSH correctos en las palabras clave mejora enormemente la precisión de la búsqueda en PubMed.</div>
+          <div style="padding:12px;background:#fff;border:1px solid var(--border);border-radius:var(--r)">📌 <strong>Sube el manuscrito:</strong> Subir Material y Métodos permite a la IA identificar exactamente qué afirmaciones necesitan justificación, evitando que la introducción sea genérica.</div>
+          <div style="padding:12px;background:#fff;border:1px solid var(--border);border-radius:var(--r)">📌 <strong>Revisa las referencias:</strong> Aunque la IA filtra retractados y verifica DOIs, siempre repasa que las citas son apropiadas para el contexto en el que aparecen.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TAB: REVISTAS ══ -->
+    <div class="tc" id="tc-journals">
+      <div class="content">
+        <div class="sh">📖 Base de datos de normas de revistas</div>
+        <div id="journals-db" style="display:grid;gap:10px"></div>
+      </div>
+    </div>
+
+    <!-- ══ TAB: PLANTILLAS ══ -->
+    <div class="tc" id="tc-prompts">
+      <div class="content">
+        <div class="sh">💬 Plantillas de prompt reutilizables</div>
+        <div id="prompts-db" style="display:grid;gap:10px"></div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- MEJORA 9: Modal atajos de teclado -->
+<div id="shortcuts-modal" style="display:none;position:fixed;inset:0;background:rgba(17,24,39,.65);z-index:2000;align-items:center;justify-content:center;backdrop-filter:blur(4px)">
+  <div style="background:var(--s2);border:1px solid var(--border);border-radius:16px;padding:28px 32px;max-width:420px;width:90%;box-shadow:var(--shadow-md)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+      <div style="font-family:var(--serif);font-size:18px">⌨️ Atajos de teclado</div>
+      <button class="btn btn-ghost" onclick="closeShortcuts()">✕</button>
+    </div>
+    <div class="shortcut-grid">
+      <div><span class="kbd">Ctrl</span> + <span class="kbd">Enter</span></div><div>Generar introducción</div>
+      <div><span class="kbd">Esc</span></div><div>Cancelar generación / cerrar modal</div>
+      <div><span class="kbd">Alt</span> + <span class="kbd">D</span></div><div>Alternar modo oscuro</div>
+      <div><span class="kbd">Alt</span> + <span class="kbd">1–5</span></div><div>Ir al paso del asistente</div>
+      <div><span class="kbd">Alt</span> + <span class="kbd">N</span></div><div>Nueva sesión</div>
+      <div><span class="kbd">Alt</span> + <span class="kbd">C</span></div><div>Copiar introducción al portapapeles</div>
+      <div><span class="kbd">Alt</span> + <span class="kbd">P</span></div><div>Exportar a PDF</div>
+      <div><span class="kbd">?</span></div><div>Abrir este panel</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+const STATE = {
+  apiKey: '',
+  currentWizard: 1,
+  files: [],
+  generating: false,
+  abortController: null,
+  history: [],
+  currentResult: null,
+  altVersions: [],
+  currentAlt: 0,
+  darkMode: false,
+  heatmapOn: false,
+  refMap: {}   // num -> ref object for tooltip lookup
+};
+
+const DATABASES = [
+  {id:'pubmed',name:'PubMed / MEDLINE',desc:'NIH — 36M+ artículos biomédicos',icon:'🔬',on:true},
+  {id:'cochrane',name:'Cochrane Library',desc:'Revisiones sistemáticas de referencia',icon:'🔍',on:true},
+  {id:'embase',name:'Embase',desc:'Farmacología y ciencias clínicas',icon:'💊',on:true},
+  {id:'semantic',name:'Semantic Scholar',desc:'200M+ artículos con análisis IA',icon:'🧠',on:true},
+  {id:'arxiv',name:'arXiv / bioRxiv',desc:'Preprints de ciencias básicas',icon:'📝',on:false},
+  {id:'openalex',name:'OpenAlex',desc:'Grafo abierto de 250M+ works',icon:'🌐',on:true},
+  {id:'europepmc',name:'Europe PMC',desc:'Literatura biomédica europea',icon:'🇪🇺',on:false},
+  {id:'crossref',name:'CrossRef',desc:'Metadatos de 140M+ DOIs',icon:'🔗',on:true},
+];
+
+const AGENTS = [
+  {id:'context',name:'Analizador de contexto',desc:'Extrae la pregunta de investigación y los endpoints del manuscrito',badge:'b-blue',on:true},
+  {id:'query',name:'Formulador de queries',desc:'Genera estrategias de búsqueda optimizadas para cada base de datos',badge:'b-blue',on:true},
+  {id:'relevance',name:'Filtro de relevancia',desc:'Puntúa cada artículo encontrado por relevancia para el estudio',badge:'b-green',on:true},
+  {id:'evidence',name:'Evaluador de evidencia',desc:'Jerarquiza la evidencia (MA > RCT > cohortes) y calidad metodológica',badge:'b-green',on:true},
+  {id:'writer',name:'Escritor académico',desc:'Redacta la introducción siguiendo las normas de la revista',badge:'b-purple',on:true},
+  {id:'citer',name:'Asignador de citas',desc:'Vincula cada afirmación con la referencia más apropiada',badge:'b-purple',on:true},
+  {id:'verifier',name:'Verificador de DOIs',desc:'Comprueba que cada DOI existe y está accesible',badge:'b-amber',on:true},
+  {id:'retract',name:'Detector de retractados',desc:'Filtra artículos retirados de PubMed/RetractionWatch',badge:'b-amber',on:true},
+  {id:'mesh',name:'Generador MeSH',desc:'Sugiere términos MeSH para el indexado de tu artículo',badge:'b-green',on:false},
+  {id:'polish',name:'Revisor de estilo',desc:'Ajusta el registro y el tono al perfil de la revista',badge:'b-purple',on:true},
+];
+
+const JOURNAL_PRESETS = {
+  lancet: {words:350,refs:20,style:'vancouver',years:10,tone:'academic',notes:'La introducción debe terminar con el objetivo del estudio. Evitar párrafos largos.'},
+  plos: {words:450,refs:25,style:'vancouver',years:10,tone:'academic',notes:'PLOS ONE valora la transparencia metodológica. Incluir justificación de la investigación explícita.'},
+  nature: {words:280,refs:15,style:'apa',years:8,tone:'concise',notes:'Nature requiere introducciones muy concretas. Sin repetición de resultados. Solo contexto esencial.'},
+  systematic: {words:500,refs:35,style:'vancouver',years:15,tone:'narrative',notes:'Incluir el protocolo PROSPERO si aplica. Justificar la necesidad de la revisión sistemática.'},
+  speciality: {words:400,refs:22,style:'vancouver',years:10,tone:'clinical',notes:''},
+  custom: {words:350,refs:20,style:'vancouver',years:10,tone:'academic',notes:''},
+};
+
+const JOURNALS_DB = [
+  {name:'The Lancet',if:'168.9',style:'Vancouver',words:'250-400',refs:'≤25',notes:'Introducción muy concisa. Terminar con objetivo. Sin subtítulos.'},
+  {name:'NEJM — New England Journal of Medicine',if:'158.5',style:'Vancouver',words:'300-450',refs:'≤25',notes:'Contexto epidemiológico amplio. Justificación clínica explícita.'},
+  {name:'JAMA',if:'120.7',style:'Vancouver',words:'250-350',refs:'≤20',notes:'Revisión bibliográfica actualizada. Preguntar hypothesis al final.'},
+  {name:'BMJ',if:'105.7',style:'Vancouver',words:'300-400',refs:'≤25',notes:'Enfoque en relevancia clínica. Incluir implicaciones para la práctica.'},
+  {name:'PLOS ONE',if:'3.7',style:'Vancouver',words:'300-500',refs:'≤30',notes:'Cualquier área científica. Justificación metodológica importante.'},
+  {name:'Nature',if:'69.5',style:'Autor-año',words:'200-350',refs:'≤20',notes:'Introducción muy corta y de alto impacto. Solo 3-4 párrafos.'},
+  {name:'Science',if:'66.8',style:'Autor-año',words:'200-300',refs:'≤15',notes:'Contexto global al inicio. Pregunta de investigación muy clara.'},
+  {name:'Cell',if:'66.9',style:'Autor-año',words:'300-500',refs:'≤30',notes:'4 párrafos estándar: estado del arte, gap, enfoque, hallazgos.'},
+  {name:'Cochrane Database',if:'12.0',style:'Vancouver',words:'400-600',refs:'≤40',notes:'PICO explícito. Justificación de la necesidad de la revisión.'},
+];
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+function init() {
+  const saved = localStorage.getItem('ig-key');
+  if (saved) { STATE.apiKey = saved; document.getElementById('ob-key').value = saved; }
+  // Mejora 6: restore dark mode
+  if (localStorage.getItem('ig-dark') === '1') { STATE.darkMode = true; document.body.classList.add('dark'); document.getElementById('dark-btn').textContent = '☀️'; }
+  renderDBGrid();
+  renderAgentsTable();
+  renderJournalsDB();
+  renderPromptsDB();
+  setupKeyboardShortcuts(); // Mejora 9
+}
+
+function startApp() {
+  const key = document.getElementById('ob-key').value.trim();
+  if (!key.startsWith('sk-') && !key.startsWith('sk-proj-')) {
+    alert('Introduce una OpenAI API Key válida (debe empezar por sk-)');
+    return;
+  }
+  STATE.apiKey = key;
+  localStorage.setItem('ig-key', key);
+  document.getElementById('onboard').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('key-display').textContent = key.slice(0,8)+'...';
+  document.getElementById('cfg-key').value = key;
+  document.getElementById('model-display').textContent = document.getElementById('p4-model').value;
+}
+
+// ═══════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════
+function switchTab(tab) {
+  document.querySelectorAll('.tc').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.ni-item').forEach(el=>el.classList.remove('active'));
+  const tc = document.getElementById('tc-'+tab);
+  if (tc) tc.classList.add('active');
+  document.querySelectorAll(`[data-tab="${tab}"]`).forEach(el=>el.classList.add('active'));
+  const titles = {generator:'Generador de Introducciones',history:'Historial',settings:'Configuración',help:'Guía de uso',journals:'Normas de revistas',prompts:'Plantillas de prompt'};
+  document.getElementById('page-title').textContent = titles[tab]||tab;
+  const mainBtn = document.getElementById('main-gen-btn');
+  mainBtn.style.display = tab==='generator'?'inline-flex':'none';
+}
+
+function goWizard(n) {
+  const max = 5;
+  if (n<1||n>max) return;
+  // validation for step 1
+  if (n>1 && !document.getElementById('p1-title').value.trim()) {
+    alert('Por favor, introduce el tema o título del artículo antes de continuar.');
+    return;
+  }
+  STATE.currentWizard = n;
+  document.querySelectorAll('.wizard-panel').forEach((el,i)=>el.classList.toggle('active',i+1===n));
+  document.querySelectorAll('.wstep').forEach((el,i)=>{
+    el.classList.toggle('active',i+1===n);
+    el.classList.toggle('done',i+1<n);
+  });
+  if (n===4) buildConfigSummary();
+  if (n===5 && !STATE.currentResult) goWizard(4);
+}
+
+function jumpToGenerate() {
+  switchTab('generator');
+  goWizard(4);
+}
+
+function resetWizard() {
+  if (STATE.generating) { stopGeneration(); }
+  STATE.files = [];
+  STATE.currentResult = null;
+  document.getElementById('file-list').innerHTML = '';
+  document.getElementById('p1-title').value = '';
+  document.getElementById('p1-text').value = '';
+  document.getElementById('gen-progress').style.display = 'none';
+  document.getElementById('result-container').innerHTML = '';
+  goWizard(1);
+}
+
+// ═══════════════════════════════════════════
+// FILE UPLOAD
+// ═══════════════════════════════════════════
+function handleFiles(e) { addFiles([...e.target.files]); }
+function handleDrag(e) { e.preventDefault(); document.getElementById('upload-zone').classList.add('drag'); }
+function handleDragLeave(e) { document.getElementById('upload-zone').classList.remove('drag'); }
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag');
+  addFiles([...e.dataTransfer.files]);
+}
+
+function addFiles(files) {
+  files.forEach(f => {
+    if (f.size > 10*1024*1024) { alert(`${f.name} supera el límite de 10 MB`); return; }
+    if (STATE.files.find(x=>x.name===f.name)) return;
+    STATE.files.push(f);
+    renderFileList();
+    readFileText(f);
+  });
+}
+
+function readFileText(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    file._text = e.target.result;
+  };
+  if (file.type === 'application/pdf') {
+    reader.readAsArrayBuffer(file);
+    file._text = '[PDF subido — se extraerá el texto durante la generación]';
+  } else {
+    reader.readAsText(file);
+  }
+}
+
+function renderFileList() {
+  const el = document.getElementById('file-list');
+  el.innerHTML = STATE.files.map((f,i)=>`
+    <div class="file-item">
+      <span class="file-icon">${f.name.endsWith('.pdf')?'📕':f.name.endsWith('.docx')||f.name.endsWith('.doc')?'📘':'📄'}</span>
+      <span class="file-name">${f.name}</span>
+      <span class="file-size">${(f.size/1024).toFixed(0)} KB</span>
+      <button class="file-rm" onclick="removeFile(${i})">✕</button>
+    </div>`).join('');
+}
+
+function removeFile(i) {
+  STATE.files.splice(i,1);
+  renderFileList();
+}
+
+// ═══════════════════════════════════════════
+// JOURNAL PRESETS
+// ═══════════════════════════════════════════
+function selectJournalPreset(el, key) {
+  document.querySelectorAll('#journal-presets .preset-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  const p = JOURNAL_PRESETS[key];
+  if (!p) return;
+  const refsInput = document.getElementById('p2-refs');
+  refsInput.value = p.refs;
+  document.getElementById('p2-refs-val').textContent = p.refs+' referencias';
+  const wordsInput = document.getElementById('p2-words');
+  wordsInput.value = p.words;
+  document.getElementById('p2-words-val').textContent = p.words+' palabras (~'+Math.round(p.words/250)+' pág.)';
+  const yearsInput = document.getElementById('p2-years');
+  yearsInput.value = p.years;
+  document.getElementById('p2-years-val').textContent = 'Últimos '+p.years+' años ('+(2025-p.years)+'-2025)';
+  document.getElementById('p2-style').value = p.style;
+  document.getElementById('p2-tone').value = p.tone;
+  document.getElementById('p2-notes').value = p.notes;
+}
+
+// ═══════════════════════════════════════════
+// DB GRID & AGENTS
+// ═══════════════════════════════════════════
+function renderDBGrid() {
+  document.getElementById('db-grid').innerHTML = DATABASES.map((db,i)=>`
+    <div class="preset-card ${db.on?'selected':''}" id="db-card-${i}" onclick="toggleDB(${i},this)" style="text-align:left;padding:12px 14px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+        <span style="font-size:18px">${db.icon}</span>
+        <span style="font-size:13px;font-weight:500;color:var(--text)">${db.name}</span>
+        <span style="margin-left:auto;font-size:18px">${db.on?'✅':'⬜'}</span>
+      </div>
+      <div style="font-size:11px;color:var(--t3)">${db.desc}</div>
+    </div>`).join('');
+}
+
+function toggleDB(i, el) {
+  DATABASES[i].on = !DATABASES[i].on;
+  el.classList.toggle('selected', DATABASES[i].on);
+  el.querySelector('span:last-child').textContent = DATABASES[i].on?'✅':'⬜';
+}
+
+function renderAgentsTable() {
+  const badges = {b_blue:'b-blue',b_green:'b-green',b_amber:'b-amber',b_purple:'b-purple'};
+  document.getElementById('agents-table').innerHTML = AGENTS.map((a,i)=>`
+    <tr>
+      <td style="padding:7px 12px"><strong style="font-size:12px">${a.name}</strong></td>
+      <td style="padding:7px 12px;color:var(--t3)">${a.desc}</td>
+      <td style="padding:7px 12px;text-align:center">
+        <div class="tsw ${a.on?'on':''}" onclick="toggleAgent(${i},this)"></div>
+      </td>
+    </tr>`).join('');
+}
+
+function toggleAgent(i, el) {
+  AGENTS[i].on = !AGENTS[i].on;
+  el.classList.toggle('on', AGENTS[i].on);
+}
+
+// ═══════════════════════════════════════════
+// CONFIG SUMMARY
+// ═══════════════════════════════════════════
+function buildConfigSummary() {
+  const title = document.getElementById('p1-title').value || '(sin título)';
+  const area = document.getElementById('p1-area').value || 'No especificada';
+  const words = document.getElementById('p2-words').value;
+  const refs = document.getElementById('p2-refs').value;
+  const style = document.getElementById('p2-style').value;
+  const lang = document.getElementById('p2-lang').options[document.getElementById('p2-lang').selectedIndex].text;
+  const years = document.getElementById('p2-years').value;
+  const dbs = DATABASES.filter(d=>d.on).map(d=>d.name).join(', ');
+  const model = document.getElementById('p4-model').value;
+
+  document.getElementById('config-summary').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div>🎯 <strong>Tema:</strong> ${title}</div>
+      <div>📚 <strong>Área:</strong> ${area}</div>
+      <div>📏 <strong>Extensión:</strong> ${words} palabras</div>
+      <div>🔖 <strong>Referencias:</strong> hasta ${refs} (estilo ${style})</div>
+      <div>🌍 <strong>Idioma:</strong> ${lang}</div>
+      <div>📅 <strong>Período:</strong> últimos ${years} años</div>
+      <div style="grid-column:1/-1">🗃️ <strong>Bases de datos:</strong> ${dbs||'(ninguna seleccionada)'}</div>
+      <div>🤖 <strong>Modelo:</strong> ${model}</div>
+      <div>📁 <strong>Manuscrito:</strong> ${STATE.files.length?STATE.files.map(f=>f.name).join(', '):'No adjuntado'}</div>
+    </div>`;
+
+  const depth = document.getElementById('p3-depth').value;
+  const times = {fast:'~2-3',standard:'~4-7',deep:'~10-15'};
+  const costs = {fast:'~$0.03',standard:'~$0.08',deep:'~$0.18'};
+  document.getElementById('est-time').textContent = (times[depth]||'~5')+' min';
+  document.getElementById('est-cost').textContent = costs[depth]||'~$0.08';
+  document.getElementById('est-refs').textContent = '~'+refs;
+}
+
+// ═══════════════════════════════════════════
+// GENERATION
+// ═══════════════════════════════════════════
+let logEl, fillEl, labelEl;
+
+async function startGeneration() {
+  if (!STATE.apiKey) { alert('No hay API Key configurada. Ve a Configuración.'); return; }
+  const title = document.getElementById('p1-title').value.trim();
+  if (!title) { alert('El título/tema del artículo es obligatorio.'); goWizard(1); return; }
+
+  STATE.generating = true;
+  STATE.abortController = new AbortController();
+  document.getElementById('gen-btn').disabled = true;
+  document.getElementById('stop-btn').disabled = false;
+  document.getElementById('gen-progress').style.display = 'block';
+
+  logEl = document.getElementById('log-box');
+  fillEl = document.getElementById('progress-fill');
+  labelEl = document.getElementById('progress-label');
+  logEl.innerHTML = '';
+
+  try {
+    await runGenerationPipeline();
+  } catch(e) {
+    if (e.name !== 'AbortError') {
+      addLog('err','Error: '+e.message);
+    } else {
+      addLog('warn','Generación cancelada por el usuario.');
+    }
+  } finally {
+    STATE.generating = false;
+    document.getElementById('gen-btn').disabled = false;
+    document.getElementById('stop-btn').disabled = true;
+  }
+}
+
+function stopGeneration() {
+  if (STATE.abortController) STATE.abortController.abort();
+  STATE.generating = false;
+  document.getElementById('gen-btn').disabled = false;
+  document.getElementById('stop-btn').disabled = true;
+}
+
+function addLog(type, msg) {
+  const time = new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const classes = {ok:'log-ok',info:'log-info',warn:'log-warn',err:'log-err'};
+  logEl.innerHTML += `<div class="log-line"><span class="log-time">${time}</span><span class="${classes[type]||'log-info'}">${msg}</span></div>`;
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function setProgress(pct, label) {
+  fillEl.style.width = pct+'%';
+  labelEl.textContent = label;
+}
+
+// ═══════════════════════════════════════════
+// REAL DATABASE SEARCH PIPELINE
+// ═══════════════════════════════════════════
+
+async function runGenerationPipeline() {
+  const signal = STATE.abortController.signal;
+
+  // ── Read all config ──
+  const title        = document.getElementById('p1-title').value.trim();
+  const area         = document.getElementById('p1-area').value;
+  const studyType    = document.getElementById('p1-study').value;
+  const hypothesis   = document.getElementById('p1-hypothesis').value.trim();
+  const keywords     = document.getElementById('p1-keywords').value.trim();
+  const manuscriptText = document.getElementById('p1-text').value.trim();
+  const lang         = document.getElementById('p2-lang').value;
+  const citeStyle    = document.getElementById('p2-style').value;
+  const words        = parseInt(document.getElementById('p2-words').value);
+  const maxRefs      = parseInt(document.getElementById('p2-refs').value);
+  const years        = parseInt(document.getElementById('p2-years').value);
+  const tone         = document.getElementById('p2-tone').value;
+  const notes        = document.getElementById('p2-notes').value.trim();
+  const model        = document.getElementById('p4-model').value;
+  const temp         = parseFloat(document.getElementById('p4-temp-val').textContent);
+  const langNames    = {es:'Spanish',en:'English',fr:'French',pt:'Portuguese',it:'Italian',de:'German'};
+  const langName     = langNames[lang] || 'English';
+
+  let manuscriptContext = '';
+  if (STATE.files.length && STATE.files[0]._text) {
+    manuscriptContext = STATE.files[0]._text.slice(0, 5000);
+  } else if (manuscriptText) {
+    manuscriptContext = manuscriptText.slice(0, 5000);
+  }
+
+  // ════════════════════════════════════════
+  // PHASE 1 — Formulate search queries
+  // ════════════════════════════════════════
+  setProgress(8, 'Fase 1/5 — Formulando estrategias de búsqueda...');
+  addLog('info', 'Generando queries optimizadas para PubMed y Semantic Scholar...');
+
+  const queries = await formulateSearchQueries(
+    title, area, studyType, hypothesis, keywords, manuscriptContext, signal
+  );
+  addLog('ok', `${queries.length} queries: ${queries.map(q=>'['+q.focus+']').join(' ')}`);
+  queries.forEach(q => addLog('info', `  • ${q.focus}: "${q.query}"`));
+
+  // ════════════════════════════════════════
+  // PHASE 2 — Real database search
+  // ════════════════════════════════════════
+  setProgress(18, 'Fase 2/5 — Buscando en PubMed y Semantic Scholar...');
+
+  const allArticles = [];
+  const useSemanticScholar = DATABASES.find(d => d.id === 'semantic')?.on;
+  const usePubMed          = DATABASES.find(d => d.id === 'pubmed')?.on;
+
+  for (const q of queries) {
+    if (signal.aborted) throw new DOMException('Aborted','AbortError');
+
+    if (usePubMed) {
+      const pm = await searchPubMed(q.query, 15, years);
+      allArticles.push(...pm);
+      addLog(pm.length ? 'ok' : 'warn',
+        `PubMed [${q.focus}]: ${pm.length} artículos`);
+      await sleep(400); // respect NCBI rate limit
+    }
+
+    if (useSemanticScholar) {
+      const ss = await searchSemanticScholar(q.query, 10);
+      allArticles.push(...ss);
+      addLog(ss.length ? 'ok' : 'warn',
+        `Semantic Scholar [${q.focus}]: ${ss.length} artículos`);
+      await sleep(1200); // 1 req/sec limit
+    }
+  }
+
+  const deduped = deduplicateArticles(allArticles);
+  addLog('ok', `Total artículos únicos recuperados: ${deduped.length}`);
+
+  if (deduped.length === 0) {
+    addLog('warn', 'Sin resultados en bases de datos. Activando modo conocimiento del modelo como respaldo.');
+  }
+
+  // ════════════════════════════════════════
+  // PHASE 3 — AI relevance filtering & ranking
+  // ════════════════════════════════════════
+  setProgress(45, 'Fase 3/5 — Evaluando relevancia y seleccionando referencias...');
+  addLog('info', `Analizando ${deduped.length} artículos por relevancia para el estudio...`);
+
+  const selectedRefs = deduped.length >= 3
+    ? await filterAndRankArticles(deduped, title, area, hypothesis, maxRefs, signal)
+    : [];
+
+  addLog('ok', `Referencias seleccionadas: ${selectedRefs.length} (de ${deduped.length} recuperadas)`);
+  selectedRefs.forEach(r => addLog('info',
+    `  [${r.num}] ${r.authors?.split(',')[0]||'?'} (${r.year||'?'}) — ${r.title?.slice(0,60)}...`));
+
+  // ════════════════════════════════════════
+  // PHASE 4 — Write introduction grounded in real refs
+  // ════════════════════════════════════════
+  setProgress(65, 'Fase 4/5 — Redactando introducción con las referencias recuperadas...');
+  addLog('info', 'Agente escritor: redactando introducción anclada en la evidencia real...');
+
+  const introText = await writeIntroWithRealRefs(
+    selectedRefs, title, area, studyType, hypothesis, keywords,
+    manuscriptContext, citeStyle, words, tone, notes, langName, model, temp, signal
+  );
+
+  // ════════════════════════════════════════
+  // PHASE 5 — Renumber + build result
+  // ════════════════════════════════════════
+  setProgress(92, 'Fase 5/5 — Renumerando citas y construyendo resultado...');
+  addLog('info', 'Renumerando citas en orden de aparición...');
+
+  // If streaming returned a JSON wrapper, unwrap it
+  let finalIntro = introText;
+  if (introText.trim().startsWith('{')) {
+    try { finalIntro = JSON.parse(introText).introduction || introText; } catch {}
+  }
+
+  // Renumber citations so [1],[2],[3]... follow order of first appearance
+  // and every selected ref appears in the reference list
+  const { introText: numberedIntro, refs: numberedRefs } =
+    renumberCitations(finalIntro, selectedRefs);
+
+  // Count cited refs (refs that actually appear in the text after renumbering)
+  const citedNums = new Set();
+  for (const m of numberedIntro.matchAll(/\[(\d+(?:[,\s]*\d+)*)\]/g)) {
+    m[1].split(/[,\s]+/).forEach(n => { const v=parseInt(n); if(v>0) citedNums.add(v); });
+  }
+  const citedCount   = citedNums.size;
+  const uncitedRefs  = numberedRefs.filter(r => !citedNums.has(r.num));
+  if (uncitedRefs.length) {
+    addLog('warn', `${uncitedRefs.length} referencias no citadas en el texto (aparecen al final de la lista): `
+      + uncitedRefs.map(r=>`[${r.num}]`).join(', '));
+  }
+  addLog('ok', `Citas en texto: ${citedCount} · Referencias en lista: ${numberedRefs.length}`);
+
+  const plainText = numberedIntro.replace(/\[\d+[,\d\s]*\]/g,'').replace(/<[^>]+>/g,'').trim();
+
+  const parsed = {
+    introduction:    numberedIntro,
+    references:      numberedRefs,
+    mesh_terms:      keywords.split(',').map(k=>k.trim()).filter(Boolean),
+    quality_score:   selectedRefs.length >= 8 ? 8.5 : selectedRefs.length >= 4 ? 7.0 : 6.0,
+    gaps_identified: [],
+    search_stats: {
+      total_retrieved: deduped.length,
+      selected: selectedRefs.length,
+      cited_in_text: citedCount,
+      databases: [usePubMed && 'PubMed', useSemanticScholar && 'Semantic Scholar'].filter(Boolean)
+    }
+  };
+  parsed.wordCount = plainText.split(/\s+/).filter(Boolean).length;
+
+  addLog('ok', `✅ Introducción: ${parsed.wordCount} palabras · ${citedCount}/${numberedRefs.length} referencias citadas`);
+  setProgress(100, '✅ Introducción generada con éxito');
+
+  STATE.currentResult = parsed;
+  STATE.altVersions   = [parsed];
+  STATE.currentAlt    = 0;
+
+  saveToHistory(parsed, title);
+  renderResult(parsed);
+  if (!document.getElementById('tog-stream').classList.contains('on')) goWizard(5);
+}
+
+// ─────────────────────────────────────────
+// GPT: formulate search queries
+// ─────────────────────────────────────────
+async function formulateSearchQueries(title, area, studyType, hypothesis, keywords, manuscript, signal) {
+  const body = {
+    model: 'gpt-4o-mini',
+    temperature: 0,
+    max_tokens: 900,
+    response_format: { type: 'json_object' },
+    messages: [{
+      role: 'system',
+      content: 'You are a medical librarian expert in PubMed search strategies. Return only valid JSON.'
+    },{
+      role: 'user',
+      content: `Generate 4 PubMed-optimized search queries for the introduction of this study.
+Each query must target a different aspect: (1) epidemiology/burden, (2) current management/guidelines, (3) adherence/gaps, (4) study-specific context.
+
+Study title: ${title}
+Area: ${area || 'Medicine'}
+Study type: ${studyType || 'observational'}
+Hypothesis: ${hypothesis || 'not specified'}
+Keywords: ${keywords || 'not specified'}
+${manuscript ? 'Manuscript excerpt:\n'+manuscript.slice(0,1500) : ''}
+
+Return: {"queries":[{"focus":"epidemiology","query":"COPD[MeSH] AND (prevalence OR incidence) AND Spain","rationale":"..."},...]}`
+    }]
+  };
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+STATE.apiKey},
+      body: JSON.stringify(body), signal
+    });
+    const data = await res.json();
+    const json = JSON.parse(data.choices[0].message.content);
+    return (json.queries || []).slice(0, 4);
+  } catch(e) {
+    addLog('warn', 'Error formulando queries: '+e.message+'. Usando keywords directamente.');
+    return [{ focus: 'general', query: (keywords || title).slice(0, 200) }];
+  }
+}
+
+// ─────────────────────────────────────────
+// PubMed E-utilities search
+// ─────────────────────────────────────────
+async function searchPubMed(query, maxResults=15, yearWindow=10) {
+  try {
+    const minYear = new Date().getFullYear() - yearWindow;
+    const fullQuery = `(${query}) AND ${minYear}:3000[pdat]`;
+    const searchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi`
+      + `?db=pubmed&term=${encodeURIComponent(fullQuery)}&retmax=${maxResults}&retmode=json&sort=relevance&tool=IntroGen`;
+
+    const sRes = await fetch(searchUrl);
+    const sData = await sRes.json();
+    const ids = sData.esearchresult?.idlist || [];
+    if (!ids.length) return [];
+
+    await sleep(350);
+    const sumUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi`
+      + `?db=pubmed&id=${ids.join(',')}&retmode=json&tool=IntroGen`;
+    const sumRes  = await fetch(sumUrl);
+    const sumData = await sumRes.json();
+
+    return ids.map(id => {
+      const item = sumData.result?.[id];
+      if (!item) return null;
+      const authors = (item.authors||[]).slice(0,3).map(a=>a.name).join(', ')
+        + ((item.authors||[]).length > 3 ? ', et al.' : '');
+      const doi = (item.articleids||[]).find(a=>a.idtype==='doi')?.value || '';
+      const pubtype = (item.pubtype||[]).join(', ');
+      const typeNorm = pubtype.toLowerCase().includes('meta-analysis') ? 'meta-analysis'
+        : pubtype.toLowerCase().includes('systematic') ? 'systematic-review'
+        : pubtype.toLowerCase().includes('randomized') ? 'RCT'
+        : pubtype.toLowerCase().includes('review') ? 'review'
+        : 'article';
+      return {
+        source: 'PubMed', pmid: id,
+        title:   (item.title||'').replace(/<[^>]+>/g,''),
+        authors, journal: item.fulljournalname || item.source || '',
+        year:    parseInt((item.pubdate||'').split(' ')[0]) || null,
+        doi, type: typeNorm, quality: 'high', abstract: ''
+      };
+    }).filter(Boolean);
+  } catch(e) {
+    addLog('warn', 'PubMed error: '+e.message);
+    return [];
+  }
+}
+
+// ─────────────────────────────────────────
+// Semantic Scholar search
+// ─────────────────────────────────────────
+async function searchSemanticScholar(query, maxResults=10) {
+  try {
+    const url = `https://api.semanticscholar.org/graph/v1/paper/search`
+      + `?query=${encodeURIComponent(query)}&limit=${maxResults}`
+      + `&fields=title,authors,year,venue,externalIds,citationCount,abstract,publicationTypes`;
+    const res  = await fetch(url);
+    if (!res.ok) return [];
+    const data = await res.json();
+
+    return (data.data||[]).map(p => {
+      const authors = (p.authors||[]).slice(0,3).map(a=>a.name).join(', ')
+        + ((p.authors||[]).length > 3 ? ', et al.' : '');
+      const types = (p.publicationTypes||[]).map(t=>t.toLowerCase());
+      const typeNorm = types.includes('meta-analysis') ? 'meta-analysis'
+        : types.includes('systematicreview') ? 'systematic-review'
+        : types.includes('review') ? 'review'
+        : 'article';
+      return {
+        source: 'Semantic Scholar',
+        title:   p.title || '',
+        authors,
+        journal:  p.venue || '',
+        year:     p.year || null,
+        doi:      p.externalIds?.DOI || '',
+        pmid:     p.externalIds?.PubMed || '',
+        citations: p.citationCount || 0,
+        abstract:  (p.abstract||'').slice(0, 250),
+        type: typeNorm, quality: 'high'
+      };
+    });
+  } catch(e) {
+    addLog('warn', 'Semantic Scholar error: '+e.message);
+    return [];
+  }
+}
+
+// ─────────────────────────────────────────
+// Deduplicate by DOI → PMID → title prefix
+// ─────────────────────────────────────────
+function deduplicateArticles(articles) {
+  const seen = new Set();
+  return articles.filter(a => {
+    const key = a.doi?.toLowerCase() || a.pmid || (a.title||'').slice(0,40).toLowerCase();
+    if (!key || seen.has(key)) return false;
+    seen.add(key); return true;
+  });
+}
+
+// ─────────────────────────────────────────
+// GPT: filter & rank retrieved articles
+// ─────────────────────────────────────────
+async function filterAndRankArticles(articles, title, area, hypothesis, maxRefs, signal) {
+  const want = Math.min(maxRefs, 25, articles.length);
+  const articleList = articles.slice(0,80).map((a,i) =>
+    `${i+1}. [${a.type||'article'}] ${a.authors} (${a.year||'?'}). "${a.title}". ${a.journal}.`
+    + (a.abstract ? ` Abstract: ${a.abstract.slice(0,180)}.` : '')
+    + (a.citations ? ` [Cited ${a.citations}×]` : '')
+  ).join('\n');
+
+  const body = {
+    model: 'gpt-4o-mini',
+    temperature: 0,
+    max_tokens: 1200,
+    response_format: { type: 'json_object' },
+    messages: [{
+      role: 'system',
+      content: 'You are a scientific editor selecting and ranking references for an article introduction. Return only valid JSON.'
+    },{
+      role: 'user',
+      content: `Select the best ${want} articles from the list below for the introduction of this study.
+Prioritize: (1) meta-analyses > systematic reviews > RCTs > cohorts, (2) high citation counts, (3) coverage of: epidemiology, current management, gaps in literature, and study justification.
+
+Study: ${title}
+Area: ${area}
+Hypothesis: ${hypothesis}
+
+RETRIEVED ARTICLES:
+${articleList}
+
+Return JSON:
+{"selected":[{"original_num":1,"role":"epidemiology|treatment|gap|methodology|guideline","keep":true},...]}
+Include exactly ${want} entries with keep:true.`
+    }]
+  };
+
+  try {
+    const res  = await fetch('https://api.openai.com/v1/chat/completions', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+STATE.apiKey},
+      body: JSON.stringify(body), signal
+    });
+    const data = await res.json();
+    const json = JSON.parse(data.choices[0].message.content);
+
+    return (json.selected||[])
+      .filter(s => s.keep !== false)
+      .map((s, i) => {
+        const art = articles[(s.original_num||i+1) - 1];
+        return art ? { ...art, num: i+1, role: s.role } : null;
+      })
+      .filter(Boolean);
+  } catch(e) {
+    addLog('warn','Error en filtrado: '+e.message+'. Usando los primeros '+want+' artículos.');
+    return articles.slice(0, want).map((a,i) => ({...a, num:i+1, role:'general'}));
+  }
+}
+
+// ─────────────────────────────────────────
+// Post-processing: renumber citations in
+// order of first appearance in the text
+// ─────────────────────────────────────────
+function renumberCitations(introText, refs) {
+  const orderMap = new Map(); // oldNum → newNum
+  let nextNum = 1;
+
+  // Replace citations in order of appearance, building the map
+  const renumbered = introText.replace(/\[(\d+(?:[,\s]*\d+)*)\]/g, (match, inner) => {
+    const oldNums = inner.split(/[,\s]+/).map(Number).filter(n => n > 0 && n <= 200);
+    if (!oldNums.length) return match;
+    const newNums = oldNums.map(n => {
+      if (!orderMap.has(n)) orderMap.set(n, nextNum++);
+      return orderMap.get(n);
+    });
+    // deduplicate and sort
+    const uniq = [...new Set(newNums)].sort((a,b)=>a-b);
+    return '[' + uniq.join(',') + ']';
+  });
+
+  // Reorder the reference list to match new numbering
+  // First include refs that were actually cited (in new order)
+  const reordered = [];
+  for (const [oldNum, newNum] of orderMap) {
+    const ref = refs.find(r => r.num === oldNum);
+    if (ref) reordered.push({ ...ref, num: newNum });
+  }
+  // Then append any uncited refs (renumbered continuing the sequence)
+  const citedOldNums = new Set(orderMap.keys());
+  refs.filter(r => !citedOldNums.has(r.num)).forEach(r => {
+    reordered.push({ ...r, num: nextNum++ });
+  });
+  reordered.sort((a,b) => a.num - b.num);
+
+  return { introText: renumbered, refs: reordered };
+}
+
+// ─────────────────────────────────────────
+// Write introduction grounded in real refs
+// ─────────────────────────────────────────
+async function writeIntroWithRealRefs(refs, title, area, studyType, hypothesis, keywords,
+    manuscript, citeStyle, targetWords, tone, notes, langName, model, temp, signal) {
+
+  const useStream = document.getElementById('tog-stream').classList.contains('on');
+
+  // Group refs by role for explicit paragraph-level assignment
+  const byRole = { epidemiology:[], treatment:[], guideline:[], gap:[], methodology:[], general:[] };
+  refs.forEach(r => {
+    const key = r.role && byRole[r.role] ? r.role : 'general';
+    byRole[key].push(r.num);
+  });
+  // Merge guideline into treatment for assignment purposes
+  byRole.treatment.push(...byRole.guideline);
+
+  const fmt = nums => nums.length ? nums.map(n=>`[${n}]`).join(', ') : '(ninguna asignada)';
+
+  // Build numbered reference list
+  const refList = refs.map(r =>
+    `[${r.num}] ${r.authors||'Authors'} (${r.year||'?'}). "${r.title}". ${r.journal||''}.`
+    + (r.doi ? ` DOI:${r.doi}` : r.pmid ? ` PMID:${r.pmid}` : '')
+    + ` {role:${r.role||'general'}}`
+  ).join('\n');
+
+  const toneInstr = {
+    academic:'Formal academic tone, precise scientific language, third person.',
+    clinical:'Practical clinical tone, relevant for clinicians, third person.',
+    concise:'Very concise, direct, high information density.',
+    narrative:'Flowing narrative prose, comprehensive coverage.',
+  }[tone] || 'Formal academic tone.';
+
+  const systemPrompt = `You are an expert scientific writer for peer-reviewed medical journals.
+
+LANGUAGE: Write entirely in ${langName}.
+
+TASK: Write a scientific introduction using EXCLUSIVELY the numbered references provided.
+
+══ MANDATORY CITATION RULES ══
+1. Use ONLY the reference numbers provided in the list below — do NOT invent numbers outside this list.
+2. Every citation must be written as a complete bracket on a single line: [1] or [1,2] or [3,4,5].
+   NEVER split a bracket across lines (no "[1" without "]" on the same line).
+3. YOU MUST CITE EVERY REFERENCE in the list at least once — distribute them across the text.
+4. Numbered citations must reflect the provided numbering exactly.
+
+══ PARAGRAPH STRUCTURE AND CITATION ASSIGNMENT ══
+Write exactly 4 paragraphs (~${Math.round(targetWords/4)} words each, total ~${targetWords} words):
+
+PARAGRAPH 1 — Epidemiology and disease burden
+  → MUST cite: ${fmt([...byRole.epidemiology, ...byRole.general.slice(0,2)])}
+
+PARAGRAPH 2 — Current management, guidelines, and their limitations
+  → MUST cite: ${fmt([...byRole.treatment, ...byRole.guideline])}
+
+PARAGRAPH 3 — Gap in the literature and justification for this study
+  → MUST cite: ${fmt([...byRole.gap, ...byRole.methodology])}
+
+PARAGRAPH 4 — Objective and hypothesis of the present study
+  → No citations required; state clearly the aim and hypothesis.
+
+STYLE: ${toneInstr}
+${notes ? 'JOURNAL-SPECIFIC NOTES: '+notes : ''}
+
+══ REFERENCE LIST (cite ONLY these, number them exactly as shown) ══
+${refList}`;
+
+  const userPrompt = `Write the introduction for this study:
+Title: ${title}
+Research area: ${area || 'Medicine'}
+Study type: ${studyType || 'observational study'}
+Hypothesis/question: ${hypothesis || 'not specified'}
+Keywords: ${keywords || 'not specified'}
+${manuscript ? '\n[Manuscript excerpt — Methods/Results]:\n'+manuscript.slice(0,2000) : ''}`;
+
+  if (!useStream) {
+    return await callOpenAI(systemPrompt, userPrompt, model, temp, signal);
+  }
+
+  // ── Streaming write ──
+  addLog('info','Streaming introducción en tiempo real...');
+  setProgress(70, 'Escribiendo introducción (streaming)...');
+
+  goWizard(5);
+  document.getElementById('result-container').innerHTML = `
+    <div class="result-panel" id="stream-panel">
+      <div style="font-size:11px;color:var(--t3);margin-bottom:10px;display:flex;align-items:center;gap:6px">
+        <div class="thinking-dots"><span></span><span></span><span></span></div>
+        Escribiendo introducción con ${refs.length} referencias reales...
+      </div>
+      <div id="stream-text" style="white-space:pre-wrap;line-height:1.85;font-size:14px;color:var(--text)"></div>
+      <span class="stream-cursor"></span>
+    </div>`;
+
+  const resStream = await fetch('https://api.openai.com/v1/chat/completions', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+STATE.apiKey},
+    body: JSON.stringify({ model, temperature:temp, max_tokens:3000, stream:true,
+      messages:[{role:'system',content:systemPrompt},{role:'user',content:userPrompt}] }),
+    signal
+  });
+  if (!resStream.ok) {
+    const e = await resStream.json().catch(()=>({}));
+    throw new Error(e.error?.message || 'HTTP '+resStream.status);
+  }
+
+  const reader  = resStream.body.getReader();
+  const decoder = new TextDecoder();
+  let introText = '';
+  const streamEl = document.getElementById('stream-text');
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    for (const line of decoder.decode(value).split('\n')) {
+      const t = line.replace(/^data: /, '').trim();
+      if (!t || t === '[DONE]') continue;
+      try {
+        const delta = JSON.parse(t).choices?.[0]?.delta?.content || '';
+        introText += delta;
+        streamEl.textContent = introText;
+      } catch {}
+    }
+  }
+  addLog('ok', 'Streaming completado.');
+  return introText;
+}
+
+function buildSystemPrompt(lang, citeStyle, words, maxRefs, years, tone, notes, dbs) {
+  const citeInstructions = {
+    vancouver: 'Use Vancouver style: inline superscript numbers [1], [2,3], etc. at the end of each sentence that requires a citation. At the end, list references numbered [1], [2], etc. in the format: Authors. Title. Journal. Year;Vol(Issue):Pages. DOI: ...',
+    apa: 'Use APA style: inline (Author, Year) or (Author1 & Author2, Year) citations. At the end, list references alphabetically in APA 7th edition format.',
+    harvard: 'Use Harvard style: inline (Author, Year) citations. At the end, list references alphabetically.',
+    chicago: 'Use Chicago style: footnotes or inline author-date citations.',
+    mla: 'Use MLA style: inline (Author page) citations with a Works Cited section at the end.',
+  }[citeStyle] || 'Use Vancouver style with superscript numbers.';
+
+  const toneInstr = {
+    academic:'Formal academic tone, precise scientific language, third person.',
+    clinical:'Practical clinical tone, relevant for clinicians, third person.',
+    concise:'Very concise, direct, no redundancy, high information density.',
+    narrative:'Narrative review tone, flowing prose, comprehensive coverage.',
+  }[tone] || 'Formal academic tone.';
+
+  return `You are an expert scientific writer specializing in writing introductions for peer-reviewed medical and scientific articles. You write with precision, citing every factual claim with real references.
+
+LANGUAGE: Write entirely in ${lang}. All text, headings, and labels must be in ${lang}.
+
+CITATION STYLE: ${citeInstructions}
+
+CRITICAL RULES FOR CITATIONS:
+1. Every factual claim, statistic, prevalence figure, or scientific assertion MUST be followed immediately by its citation.
+2. Do NOT make up references. Use real, verifiable articles. Include real DOIs when possible.
+3. Prioritize high-quality evidence: meta-analyses > systematic reviews > RCTs > cohort studies.
+4. Include references from: ${dbs}
+5. Focus on publications from the last ${years} years, but include seminal older references when essential.
+6. Maximum ${maxRefs} references total.
+
+STRUCTURE: A scientific introduction typically has 3-4 paragraphs following this pattern:
+- Paragraph 1: Epidemiological context and burden of the disease/condition (prevalence, incidence, mortality, socioeconomic impact — all cited)
+- Paragraph 2: Current state of knowledge, existing treatments/approaches and their limitations (all cited)
+- Paragraph 3: Gap in the literature — what is not known or what remains controversial (cited)
+- Paragraph 4 (short): Objective and hypothesis of the present study
+
+TONE: ${toneInstr}
+TARGET LENGTH: Approximately ${words} words (not counting references).
+${notes ? 'SPECIAL JOURNAL INSTRUCTIONS: '+notes : ''}
+
+OUTPUT FORMAT:
+Return a JSON object with this exact structure:
+{
+  "introduction": "The full introduction text with inline citations as [1], [2], etc.",
+  "references": [
+    {
+      "num": 1,
+      "authors": "Smith J, García M, Wang L",
+      "title": "Full article title",
+      "journal": "Journal Name",
+      "year": 2022,
+      "volume": "45",
+      "issue": "3",
+      "pages": "234-241",
+      "doi": "10.1000/xyz123",
+      "pmid": "12345678",
+      "type": "meta-analysis",
+      "quality": "high"
+    }
+  ],
+  "mesh_terms": ["term1", "term2"],
+  "word_count": 350,
+  "language": "${lang}",
+  "quality_score": 8.5,
+  "gaps_identified": ["gap1", "gap2"]
+}
+
+Only output valid JSON. No markdown code blocks around it.`;
+}
+
+function buildUserPrompt(title, area, studyType, hypothesis, keywords, manuscript, dbs) {
+  return `Generate a scientific introduction for the following research article:
+
+TITLE/TOPIC: ${title}
+RESEARCH AREA: ${area || 'Not specified'}
+STUDY TYPE: ${studyType || 'Not specified'}
+MAIN HYPOTHESIS/QUESTION: ${hypothesis || 'Not specified'}
+KEYWORDS (MeSH): ${keywords || 'Not specified'}
+
+${manuscript ? 'MANUSCRIPT CONTENT (Methods and Results — use this to understand what the study found and what needs to be justified in the introduction):\n'+manuscript : 'No manuscript provided — generate a comprehensive introduction based on the topic.'}
+
+DATABASES TO SIMULATE SEARCHING: ${dbs}
+
+Based on this information, generate a complete, rigorous scientific introduction. Search your training knowledge for real, verifiable references that would appear in these databases. Every claim must be cited. The introduction must logically lead to the study described above, justifying its necessity based on the identified gap in the literature.`;
+}
+
+function parseAIResponse(text) {
+  let json;
+  try {
+    const cleaned = text.replace(/^```json?\n?/,'').replace(/\n?```$/,'').trim();
+    json = JSON.parse(cleaned);
+  } catch(e) {
+    // JSON parse failed — show a useful error rather than raw JSON
+    json = {
+      introduction: '⚠️ El modelo no devolvió JSON válido. Prueba con streaming desactivado o cambia a gpt-4o.',
+      references: [],
+      mesh_terms: [],
+      quality_score: 0,
+      gaps_identified: []
+    };
+  }
+
+  // Normalise fields
+  json.references = Array.isArray(json.references) ? json.references : [];
+  json.mesh_terms = Array.isArray(json.mesh_terms) ? json.mesh_terms : [];
+  json.gaps_identified = Array.isArray(json.gaps_identified) ? json.gaps_identified : [];
+  json.quality_score = typeof json.quality_score === 'number' ? json.quality_score : 7.0;
+  json.introduction = json.introduction || '';
+
+  // Always count words ourselves — never trust the model's word_count claim
+  const plainText = json.introduction.replace(/\[\d+\]/g,'').replace(/<[^>]+>/g,'').trim();
+  json.wordCount = plainText ? plainText.split(/\s+/).filter(Boolean).length : 0;
+
+  // Ensure every ref has a num
+  json.references.forEach((r,i)=>{ if(!r.num) r.num = i+1; });
+
+  return json;
+}
+
+// ═══════════════════════════════════════════
+// RENDER RESULT (con mejoras 3,4,5,7,8,10)
+// ═══════════════════════════════════════════
+function renderResult(data) {
+  const refs = data.references || [];
+  // Build ref lookup for tooltips (Mejora 10)
+  STATE.refMap = {};
+  refs.forEach(r => { STATE.refMap[r.num] = r; });
+
+  const intro = formatIntroWithTooltips(data.introduction || '', STATE.refMap);
+  const qualityColor = data.quality_score >= 8 ? 'fill-green' : data.quality_score >= 6 ? 'fill-amber' : 'fill-red';
+  const qualitySegs = Array.from({length:10},(_,i)=>`<div class="qb-seg ${i < Math.round(data.quality_score||0) ? qualityColor : ''}"></div>`).join('');
+
+  // Mejora 4: compliance badge
+  const compliance = buildComplianceBadge(data.wordCount||0, refs.length);
+
+  // Mejora 8: alt version tabs
+  const altTabs = STATE.altVersions.length > 1
+    ? `<div style="display:flex;gap:6px;margin-bottom:12px">
+        ${STATE.altVersions.map((_,i)=>`<button class="btn alt-btn ${i===STATE.currentAlt?'btn-primary':''}" onclick="switchAltVersion(${i})">Versión ${i+1}</button>`).join('')}
+       </div>`
+    : '';
+
+  document.getElementById('result-container').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.06em">Introducción generada</div>
+        <div style="font-size:18px;font-family:var(--serif);color:var(--text)">${document.getElementById('p1-title').value||'Introducción científica'}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-ghost" id="heatmap-btn" onclick="toggleHeatmap()">🎨 Heatmap OFF</button>
+        <button class="btn btn-ghost" onclick="copyIntroduction()">📋 Copiar</button>
+        <button class="btn btn-ghost" onclick="exportWord()">📘 Word</button>
+        <button class="btn btn-ghost" onclick="exportBibtex()">📜 BibTeX</button>
+        <button class="btn btn-ghost" onclick="exportPDF()">🖨️ PDF</button>
+        <button class="btn btn-primary" onclick="resetWizard()">🔄 Nueva</button>
+      </div>
+    </div>
+
+    <!-- Mejora 4: compliance -->
+    <div style="margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      ${compliance}
+      <span style="font-size:11px;color:var(--t3)">Calidad estimada:</span>
+      <div class="quality-bar">${qualitySegs}</div>
+      <span style="font-size:12px;font-weight:500;color:var(--accent)">${data.quality_score?.toFixed(1)||'–'}/10</span>
+    </div>
+
+    <div class="result-meta">
+      <div class="result-meta-item"><div class="rm-val">${data.wordCount||0}</div><div class="rm-lbl">Palabras</div></div>
+      <div class="result-meta-item"><div class="rm-val">${refs.length}</div><div class="rm-lbl">Referencias</div></div>
+      ${data.search_stats ? `
+      <div class="result-meta-item"><div class="rm-val">${data.search_stats.total_retrieved||0}</div><div class="rm-lbl">Artículos recuperados</div></div>
+      <div class="result-meta-item"><div class="rm-val" style="color:var(--teal)">${data.search_stats.cited_in_text||refs.length}/${refs.length}</div><div class="rm-lbl">Refs citadas</div></div>
+      ` : ''}
+      ${data.mesh_terms?.length ? `<div class="result-meta-item"><div class="rm-val">${data.mesh_terms.length}</div><div class="rm-lbl">Términos MeSH</div></div>` : ''}
+    </div>
+
+    ${data.gaps_identified?.length ? `
+    <div class="alert alert-info" style="margin-bottom:14px">
+      <span>🔍</span><div><strong>Gaps identificados:</strong> ${data.gaps_identified.join(' · ')}</div>
+    </div>` : ''}
+
+    ${altTabs}
+
+    <div class="result-panel">
+      <!-- Mejora 3: heatmap wrapper -->
+      <div id="result-text-wrap" class="${STATE.heatmapOn?'heatmap-on':''}">
+        <div id="intro-text">${intro}</div>
+      </div>
+
+      ${refs.length ? `
+      <div class="ref-section">
+        <h4>Referencias</h4>
+        <div id="result-refs">${refs.map(r=>renderRef(r)).join('')}</div>
+      </div>` : '<div id="result-refs"></div>'}
+    </div>
+
+    <!-- Mejora 7: evidence pyramid -->
+    ${refs.length ? buildEvidencePyramid(refs) : ''}
+
+    ${data.mesh_terms?.length ? `
+    <div style="margin-top:14px;padding:14px;background:var(--s2);border:1px solid var(--border);border-radius:var(--r)">
+      <div style="font-size:11px;font-weight:500;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Términos MeSH sugeridos</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">${data.mesh_terms.map(t=>`<span class="badge b-blue">${t}</span>`).join('')}</div>
+    </div>` : ''}
+  `;
+}
+
+// Mejora 10: inline ref tooltips on hover
+function formatIntroWithTooltips(text, refMap) {
+  return text
+    .replace(/\n\n/g,'</p><p>')
+    .replace(/\n/g,'<br>')
+    .replace(/\[(\d+(?:[,\-]\d+)*)\]/g,(match,nums)=>{
+      return nums.split(',').map(n=>{
+        n = n.trim();
+        const r = refMap[parseInt(n)];
+        const tip = r
+          ? `<span class="ref-tooltip">[${n}] ${r.authors?.split(',').slice(0,2).join(',')||''}. <em>${r.title||''}</em>. ${r.journal||''} ${r.year||''}.</span>`
+          : '';
+        return `<sup class="ref-inline" onclick="highlightRef(${n})">[${n}]${tip}</sup>`;
+      }).join('');
+    })
+    .replace(/^/,'<p>').replace(/$/,'</p>');
+}
+
+function renderRef(r) {
+  const doi = r.doi ? `<a href="https://doi.org/${r.doi}" target="_blank">doi:${r.doi}</a>` : '';
+  const pmid = r.pmid ? `<a href="https://pubmed.ncbi.nlm.nih.gov/${r.pmid}" target="_blank">PMID:${r.pmid}</a>` : '';
+  const links = [doi,pmid].filter(Boolean).join(' · ');
+  const typeBadge = r.type ? `<span class="badge ${r.quality==='high'?'b-green':'b-blue'}" style="margin-left:6px">${r.type}</span>` : '';
+
+  return `<div class="ref-item" id="ref-${r.num}">
+    <div class="ref-num">${r.num}.</div>
+    <div class="ref-body">
+      ${r.authors}. ${r.title}. <em>${r.journal}</em>. ${r.year};${r.volume||''}${r.issue?'('+r.issue+')':''}:${r.pages||''}.${typeBadge}
+      ${links ? '<br><span style="font-size:11px;color:var(--t3)">'+links+'</span>' : ''}
+    </div>
+  </div>`;
+}
+
+function highlightRef(num) {
+  const el = document.getElementById('ref-'+num);
+  if (!el) return;
+  el.scrollIntoView({behavior:'smooth',block:'center'});
+  el.style.background='#eff6ff';
+  el.style.borderColor='var(--accent)';
+  setTimeout(()=>{ el.style.background=''; el.style.borderColor=''; },2000);
+}
+
+// ═══════════════════════════════════════════
+// EXPORT FUNCTIONS
+// ═══════════════════════════════════════════
+function copyIntroduction() {
+  // Strip tooltip spans before copying so only visible text is captured
+  const el = document.getElementById('intro-text');
+  if (!el) return;
+  const clone = el.cloneNode(true);
+  clone.querySelectorAll('.ref-tooltip').forEach(t=>t.remove());
+  const text = clone.innerText || clone.textContent || '';
+  navigator.clipboard.writeText(text).then(()=>{
+    const btn = document.querySelector('[onclick="copyIntroduction()"]');
+    if (btn) { const orig=btn.textContent; btn.textContent='✅ Copiado'; setTimeout(()=>btn.textContent=orig,2000); }
+  });
+}
+
+function exportWord() {
+  if (!STATE.currentResult) return;
+  const intro = STATE.currentResult.introduction || '';
+  const refs = (STATE.currentResult.references||[]).map(r=>
+    `${r.num}. ${r.authors}. ${r.title}. ${r.journal}. ${r.year};${r.volume||''}${r.issue?'('+r.issue+')':''}:${r.pages||''}. ${r.doi?'doi:'+r.doi:''}`
+  ).join('\n');
+
+  const content = `INTRODUCCIÓN\n\n${intro}\n\nREFERENCIAS\n\n${refs}`;
+  const blob = new Blob([content],{type:'application/msword'});
+  const a = document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='introduccion-cientifica.doc';
+  a.click();
+}
+
+function exportBibtex() {
+  if (!STATE.currentResult) return;
+  const refs = STATE.currentResult.references||[];
+  const bibtex = refs.map(r=>{
+    const key = (r.authors?.split(',')[0]?.replace(/\s/g,'')||'Author')+r.year;
+    return `@article{${key},\n  author={${r.authors}},\n  title={${r.title}},\n  journal={${r.journal}},\n  year={${r.year}},\n  volume={${r.volume||''}},\n  number={${r.issue||''}},\n  pages={${r.pages||''}},\n  doi={${r.doi||''}}\n}`;
+  }).join('\n\n');
+  const blob = new Blob([bibtex],{type:'text/plain'});
+  const a = document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='references.bib';
+  a.click();
+}
+
+// ═══════════════════════════════════════════
+// HISTORY
+// ═══════════════════════════════════════════
+function saveToHistory(data, title) {
+  const entry = {
+    id: Date.now(),
+    title: title,
+    date: new Date().toLocaleDateString('es'),
+    words: data.wordCount,
+    refs: data.references?.length||0,
+    data: data
+  };
+  STATE.history.unshift(entry);
+  localStorage.setItem('ig-history', JSON.stringify(STATE.history.slice(0,20)));
+  renderHistoryList();
+}
+
+function loadHistory() {
+  const saved = localStorage.getItem('ig-history');
+  if (saved) STATE.history = JSON.parse(saved);
+  renderHistoryList();
+}
+
+function renderHistoryList() {
+  const el = document.getElementById('history-list');
+  if (!STATE.history.length) {
+    el.innerHTML = '<div style="text-align:center;padding:48px;color:var(--t3)"><div style="font-size:36px;margin-bottom:12px">📭</div><div>Aún no has generado ninguna introducción</div></div>';
+    return;
+  }
+  el.innerHTML = STATE.history.map(h=>`
+    <div class="hist-item" onclick="loadFromHistory(${h.id})">
+      <span class="hist-icon">📄</span>
+      <div>
+        <div class="hist-title">${h.title}</div>
+        <div class="hist-meta">${h.date} · ${h.words} palabras · ${h.refs} referencias</div>
+      </div>
+      <div class="hist-actions">
+        <button class="btn btn-ghost" onclick="event.stopPropagation();deleteHistory(${h.id})">🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+function loadFromHistory(id) {
+  const entry = STATE.history.find(h=>h.id===id);
+  if (!entry) return;
+  STATE.currentResult = entry.data;
+  switchTab('generator');
+  renderResult(entry.data);
+  goWizard(5);
+}
+
+function deleteHistory(id) {
+  STATE.history = STATE.history.filter(h=>h.id!==id);
+  localStorage.setItem('ig-history',JSON.stringify(STATE.history));
+  renderHistoryList();
+}
+
+// ═══════════════════════════════════════════
+// JOURNALS DB
+// ═══════════════════════════════════════════
+function renderJournalsDB() {
+  document.getElementById('journals-db').innerHTML = JOURNALS_DB.map(j=>`
+    <div style="background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:14px 18px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <span style="font-size:15px;font-weight:500;color:var(--text)">${j.name}</span>
+        <span class="badge b-blue">IF ${j.if}</span>
+      </div>
+      <div style="display:flex;gap:16px;font-size:12px;color:var(--t3);flex-wrap:wrap;margin-bottom:6px">
+        <span>📏 ${j.words} palabras</span>
+        <span>🔖 ${j.refs} referencias</span>
+        <span>📝 ${j.style}</span>
+      </div>
+      ${j.notes ? `<div style="font-size:12px;color:var(--t2);padding-top:6px;border-top:1px solid var(--border)">${j.notes}</div>` : ''}
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════
+// PROMPTS DB
+// ═══════════════════════════════════════════
+const PROMPTS = [
+  {icon:'🏥',name:'Ensayo clínico',desc:'Plantilla para ECAs con pregunta PICO, justificación y objetivo primario',text:'Estoy desarrollando un ensayo clínico aleatorizado sobre [INTERVENCIÓN] vs [COMPARADOR] en pacientes con [CONDICIÓN]. El objetivo primario es [ENDPOINT]. Por favor, genera una introducción que contextualice la epidemiología de [CONDICIÓN], las limitaciones de los tratamientos actuales y justifique la necesidad de este ensayo.'},
+  {icon:'🔍',name:'Revisión sistemática',desc:'Estructura PRISMA para justificar la necesidad de una nueva revisión',text:'Realizamos una revisión sistemática y meta-análisis sobre la eficacia de [INTERVENCIÓN] en [POBLACIÓN]. Existe una revisión previa de [AÑO] pero incluye estudios heterogéneos y no considera [ASPECTO]. Genera una introducción PRISMA-compliant que justifique la actualización.'},
+  {icon:'🧬',name:'Investigación básica',desc:'Para estudios de biología molecular, genética o ciencia básica',text:'Nuestro estudio investiga el papel de [GEN/PROTEÍNA/VÍA METABÓLICA] en [PROCESO BIOLÓGICO] usando [MODELO]. Genera una introducción que explique la biología del proceso, los hallazgos previos y la pregunta aún no resuelta.'},
+  {icon:'📊',name:'Estudio epidemiológico',desc:'Contexto de salud pública, prevalencia, factores de riesgo',text:'Presentamos un estudio [TIPO] que analiza la asociación entre [EXPOSICIÓN] y [DESENLACE] en [POBLACIÓN] durante [PERÍODO]. Genera una introducción con datos epidemiológicos, mecanismos biológicos plausibles y justificación del diseño.'},
+];
+
+function renderPromptsDB() {
+  document.getElementById('prompts-db').innerHTML = PROMPTS.map((p,i)=>`
+    <div style="background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:14px 18px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <span style="font-size:20px">${p.icon}</span>
+        <span style="font-size:14px;font-weight:500">${p.name}</span>
+        <button class="btn btn-ghost" style="margin-left:auto" onclick="usePromptTemplate(${i})">Usar plantilla</button>
+      </div>
+      <div style="font-size:12px;color:var(--t3);margin-bottom:8px">${p.desc}</div>
+      <div style="font-size:12px;color:var(--t2);background:#f7f8fa;padding:10px;border-radius:6px;line-height:1.6">${p.text}</div>
+    </div>`).join('');
+}
+
+function usePromptTemplate(i) {
+  const p = PROMPTS[i];
+  document.getElementById('p1-text').value = p.text;
+  switchTab('generator');
+  goWizard(1);
+}
+
+// ═══════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════
+function toggleSw(el) { el.classList.toggle('on'); }
+function updateModelDisplay() { document.getElementById('model-display').textContent = document.getElementById('p4-model').value; }
+function saveKey() {
+  const key = document.getElementById('cfg-key').value.trim();
+  if (!key) return;
+  STATE.apiKey = key;
+  localStorage.setItem('ig-key', key);
+  document.getElementById('key-display').textContent = key.slice(0,8)+'...';
+  alert('✅ Clave guardada correctamente');
+}
+function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
+
+// ═══════════════════════════════════════════
+// MEJORA 6: DARK MODE
+// ═══════════════════════════════════════════
+function toggleDark() {
+  STATE.darkMode = !STATE.darkMode;
+  document.body.classList.toggle('dark', STATE.darkMode);
+  document.getElementById('dark-btn').textContent = STATE.darkMode ? '☀️' : '🌙';
+  localStorage.setItem('ig-dark', STATE.darkMode ? '1' : '0');
+}
+
+// ═══════════════════════════════════════════
+// MEJORA 9: KEYBOARD SHORTCUTS
+// ═══════════════════════════════════════════
+function setupKeyboardShortcuts() {
+  document.addEventListener('keydown', e => {
+    const tag = document.activeElement.tagName.toLowerCase();
+    const typing = tag === 'input' || tag === 'textarea' || tag === 'select';
+
+    // Ctrl+Enter → generate
+    if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); startGeneration(); return; }
+    // Escape → cancel or close modal
+    if (e.key === 'Escape') {
+      if (document.getElementById('shortcuts-modal').style.display === 'flex') { closeShortcuts(); return; }
+      if (STATE.generating) stopGeneration();
+      return;
+    }
+    if (typing) return;
+    // Alt+D → dark mode
+    if (e.altKey && e.key === 'd') { e.preventDefault(); toggleDark(); return; }
+    // Alt+1-5 → wizard step
+    if (e.altKey && e.key >= '1' && e.key <= '5') { e.preventDefault(); goWizard(parseInt(e.key)); return; }
+    // Alt+N → new session
+    if (e.altKey && e.key === 'n') { e.preventDefault(); resetWizard(); return; }
+    // Alt+C → copy
+    if (e.altKey && e.key === 'c') { e.preventDefault(); copyIntroduction(); return; }
+    // Alt+P → print/PDF
+    if (e.altKey && e.key === 'p') { e.preventDefault(); exportPDF(); return; }
+    // ? → shortcuts modal
+    if (e.key === '?') { showShortcuts(); return; }
+  });
+}
+function showShortcuts() { document.getElementById('shortcuts-modal').style.display = 'flex'; }
+function closeShortcuts() { document.getElementById('shortcuts-modal').style.display = 'none'; }
+
+// ═══════════════════════════════════════════
+// MEJORA 2: PICO EXTRACTOR
+// ═══════════════════════════════════════════
+async function extractPICO() {
+  if (!STATE.apiKey) { alert('Necesitas una API Key para usar el extractor PICO.'); return; }
+  const text = document.getElementById('p1-text').value.trim() ||
+               (STATE.files[0]?._text || '');
+  if (!text || text.length < 50) {
+    alert('Pega el texto de tu manuscrito (Material y Métodos / Resultados) primero.');
+    return;
+  }
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = '⏳ Extrayendo...';
+  try {
+    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+STATE.apiKey},
+      body: JSON.stringify({
+        model:'gpt-4o-mini', temperature:0,
+        messages:[
+          {role:'system',content:'Extract the PICO elements from the provided manuscript text. Return ONLY valid JSON: {"P":"population","I":"intervention","C":"comparator or control","O":"primary outcome"}. Be concise (1-2 sentences each). If an element is not clearly stated, infer it from context.'},
+          {role:'user',content: text.slice(0,4000)}
+        ]
+      })
+    });
+    const data = await resp.json();
+    const raw = data.choices?.[0]?.message?.content || '{}';
+    const pico = JSON.parse(raw.replace(/^```json?\n?/,'').replace(/\n?```$/,'').trim());
+    document.getElementById('pico-p').textContent = pico.P || '–';
+    document.getElementById('pico-i').textContent = pico.I || '–';
+    document.getElementById('pico-c').textContent = pico.C || '–';
+    document.getElementById('pico-o').textContent = pico.O || '–';
+    document.getElementById('pico-result').style.display = 'grid';
+    // Auto-fill hypothesis field if empty
+    if (!document.getElementById('p1-hypothesis').value) {
+      document.getElementById('p1-hypothesis').value =
+        `P: ${pico.P||''} · I: ${pico.I||''} · C: ${pico.C||''} · O: ${pico.O||''}`;
+    }
+  } catch(err) {
+    alert('Error al extraer PICO: '+err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Extraer PICO del manuscrito';
+  }
+}
+
+// ═══════════════════════════════════════════
+// MEJORA 1: OPENAI CALL (streaming + json_object mode)
+// ═══════════════════════════════════════════
+
+// Returns whether the model supports response_format json_object
+function supportsJsonMode(model) {
+  return !model.startsWith('o1');
+}
+
+async function callOpenAI(systemPrompt, userPrompt, model, temp, signal) {
+  const useStream = document.getElementById('tog-stream').classList.contains('on');
+  addLog('info',`Llamando a OpenAI API (${model}${useStream?' · streaming':''})...`);
+
+  if (!useStream) {
+    // ── Non-streaming: use json_object mode to guarantee valid JSON ──
+    const body = {
+      model, temperature: temp, max_tokens: 4096,
+      messages:[{role:'system',content:systemPrompt},{role:'user',content:userPrompt}]
+    };
+    if (supportsJsonMode(model)) body.response_format = { type: 'json_object' };
+
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+STATE.apiKey},
+      body: JSON.stringify(body), signal
+    });
+    if (!res.ok) { const e=await res.json().catch(()=>({})); throw new Error(e.error?.message||'HTTP '+res.status); }
+    const data = await res.json();
+    addLog('ok','Tokens usados: '+data.usage?.total_tokens);
+    return data.choices[0].message.content;
+  }
+
+  // ── Streaming: two-phase approach ──
+  // Phase 1 — stream the introduction prose (plain text, human-readable)
+  const targetWords = document.getElementById('p2-words').value;
+  const targetRefs  = document.getElementById('p2-refs').value;
+  const writeLang   = document.getElementById('p2-lang').value === 'es' ? 'Spanish' : 'English';
+  const minCites    = Math.max(8, Math.round(targetRefs * 0.6));  // aim for at least 60% of the ref limit
+  const introSystemPrompt = `You are an expert scientific writer specializing in peer-reviewed medical articles.
+Write ONLY the introduction section prose. Do NOT include a references list, headers, or JSON.
+
+CITATION FORMAT (critical):
+- After every factual claim, statistic, or scientific assertion add a citation immediately: [1] or [2,3] or [4,5,6]
+- Every bracket MUST be complete: opening [ and closing ] on the same token, never split across lines
+- Number citations sequentially starting from [1]; reuse the same number if the same source supports multiple claims
+- Aim to use between ${minCites} and ${targetRefs} distinct citation numbers
+
+LANGUAGE: ${writeLang}
+TARGET LENGTH: approximately ${targetWords} words
+
+STRUCTURE (4 paragraphs):
+1. Epidemiology: prevalence, incidence, mortality, global burden (cite 3-5 sources)
+2. Current management and its limitations (cite 3-5 sources)
+3. Gap in the literature: what is unknown or underexplored (cite 2-3 sources)
+4. Objective of the present study (no citations needed)`;
+
+  goWizard(5);
+  document.getElementById('result-container').innerHTML = `
+    <div class="result-panel" id="stream-panel">
+      <div style="font-size:11px;color:var(--t3);margin-bottom:10px;display:flex;align-items:center;gap:6px">
+        <div class="thinking-dots"><span></span><span></span><span></span></div> Escribiendo introducción...
+      </div>
+      <div id="stream-text" style="white-space:pre-wrap;line-height:1.85;font-size:14px;color:var(--text)"></div><span class="stream-cursor"></span>
+    </div>`;
+
+  const resStream = await fetch('https://api.openai.com/v1/chat/completions', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+STATE.apiKey},
+    body:JSON.stringify({model, temperature:temp, max_tokens:3000, stream:true,
+      messages:[{role:'system',content:introSystemPrompt},{role:'user',content:userPrompt}]}),
+    signal
+  });
+  if (!resStream.ok) { const e=await resStream.json().catch(()=>({})); throw new Error(e.error?.message||'HTTP '+resStream.status); }
+
+  const reader = resStream.body.getReader();
+  const decoder = new TextDecoder();
+  let introText = '';
+  const streamEl = document.getElementById('stream-text');
+
+  while (true) {
+    const {done, value} = await reader.read();
+    if (done) break;
+    for (const line of decoder.decode(value).split('\n')) {
+      const t = line.replace(/^data: /,'').trim();
+      if (!t || t === '[DONE]') continue;
+      try {
+        const delta = JSON.parse(t).choices?.[0]?.delta?.content || '';
+        introText += delta;
+        streamEl.textContent = introText;
+      } catch {}
+    }
+  }
+  addLog('ok','Introducción escrita. Obteniendo referencias...');
+
+  // Extract every unique citation number — handles complete [1], [2,3], ranges [1-3]
+  // AND broken patterns: open-only [1  or  close-only 2]
+  const citNums = new Set();
+
+  // 1. Complete citations: [1], [2,3], [2, 3], [4 5]
+  for (const m of introText.matchAll(/\[(\d+(?:[,\s\-]\d+)*)\]/g)) {
+    const inner = m[1];
+    if (/^\d+\s*-\s*\d+$/.test(inner.trim())) {
+      const [a,b] = inner.split(/\s*-\s*/).map(Number);
+      for (let i=a; i<=b && i<=60; i++) citNums.add(i);
+    } else {
+      inner.split(/[,\s]+/).filter(Boolean).forEach(n => { const v=parseInt(n); if(v>0&&v<=60) citNums.add(v); });
+    }
+  }
+  // 2. Broken open bracket: [1 (no closing ])
+  for (const m of introText.matchAll(/\[(\d+)(?!\d*\])/g)) {
+    const v = parseInt(m[1]); if(v>0&&v<=60) citNums.add(v);
+  }
+  // 3. Broken close bracket: 2] (no opening [)
+  for (const m of introText.matchAll(/(?<!\[)(?<!\d)(\d+)\]/g)) {
+    const v = parseInt(m[1]); if(v>0&&v<=60) citNums.add(v);
+  }
+
+  // 4. Safety net: if we found some refs, fill any gaps up to the max detected
+  //    (e.g. if [1] and [3] found but [2] missing, include [2] too)
+  if (citNums.size > 0) {
+    const maxDetected = Math.max(...citNums);
+    for (let i = 1; i <= maxDetected; i++) citNums.add(i);
+  }
+
+  const sortedNums = [...citNums].filter(n=>!isNaN(n)&&n>0).sort((a,b)=>a-b);
+  addLog('info',`Citas detectadas en el texto: [${sortedNums.join(', ')}] — solicitando ${sortedNums.length} referencias`);
+
+  // Phase 2 — structured references (non-streaming, json_object mode)
+  const refModel = model === 'o1-preview' ? 'gpt-4o-mini' : model;
+  const refsSystemPrompt = `You are a scientific reference librarian. The user provides an introduction text with numbered inline citations. You must return a JSON object containing EXACTLY one entry per citation number listed.
+
+Return ONLY this JSON structure (no markdown, no explanation):
+{"references":[{"num":1,"authors":"Last FM, Last2 FM","title":"Full title","journal":"Journal Name","year":2020,"volume":"45","issue":"3","pages":"100-110","doi":"10.xxxx/xxxxx","pmid":"12345678","type":"meta-analysis","quality":"high"}],"mesh_terms":["term1","term2"],"gaps_identified":["gap description"],"quality_score":8.0}
+
+CRITICAL: Generate exactly ${sortedNums.length} references, one for each of these citation numbers: ${sortedNums.join(', ')}. Use real, verifiable references relevant to the topic. For "type" use: meta-analysis, systematic-review, RCT, cohort, cross-sectional, case-control, review, guideline, or other.`;
+
+  const refBody = {
+    model: refModel,
+    temperature: 0,
+    max_tokens: 400 * sortedNums.length + 500,  // scale tokens with ref count
+    messages:[
+      {role:'system', content: refsSystemPrompt},
+      {role:'user', content:
+        `Introduction text:\n"""\n${introText}\n"""\n\nCitation numbers to cover: ${sortedNums.join(', ')}`}
+    ]
+  };
+  if (supportsJsonMode(refModel)) refBody.response_format = { type: 'json_object' };
+
+  const resRefs = await fetch('https://api.openai.com/v1/chat/completions', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+STATE.apiKey},
+    body:JSON.stringify(refBody), signal
+  });
+  if (!resRefs.ok) { const e=await resRefs.json().catch(()=>({})); throw new Error(e.error?.message||'HTTP '+resRefs.status); }
+  const refsData = await resRefs.json();
+  addLog('ok','Referencias: tokens usados = '+refsData.usage?.total_tokens);
+  const refsJson = refsData.choices[0].message.content;
+
+  addLog('ok','Referencias obtenidas. Ensamblando resultado...');
+
+  try {
+    const refs = JSON.parse(refsJson.replace(/^```json?\n?/,'').replace(/\n?```$/,'').trim());
+    return JSON.stringify({ introduction: introText, ...refs });
+  } catch(e) {
+    addLog('warn','No se pudo parsear el JSON de referencias: '+e.message);
+    return JSON.stringify({ introduction: introText, references: [], mesh_terms: [], quality_score: 7.5, gaps_identified: [] });
+  }
+}
+
+// Non-streaming call with json_object mode, used for alt versions and PICO
+async function callOpenAISimple(systemPrompt, userPrompt, model, temp, signal) {
+  const body = {
+    model, temperature: Math.min(temp, 1), max_tokens: 4096,
+    messages:[{role:'system',content:systemPrompt},{role:'user',content:userPrompt}]
+  };
+  if (supportsJsonMode(model)) body.response_format = { type: 'json_object' };
+
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+STATE.apiKey},
+    body:JSON.stringify(body), signal
+  });
+  if (!res.ok) { const e=await res.json().catch(()=>({})); throw new Error(e.error?.message||'HTTP '+res.status); }
+  const data = await res.json();
+  return data.choices[0].message.content;
+}
+
+// ═══════════════════════════════════════════
+// MEJORA 3: CITATION HEATMAP TOGGLE
+// ═══════════════════════════════════════════
+function toggleHeatmap() {
+  STATE.heatmapOn = !STATE.heatmapOn;
+  const panel = document.getElementById('result-text-wrap');
+  if (panel) panel.classList.toggle('heatmap-on', STATE.heatmapOn);
+  const btn = document.getElementById('heatmap-btn');
+  if (btn) btn.textContent = STATE.heatmapOn ? '🎨 Heatmap ON' : '🎨 Heatmap OFF';
+}
+
+// ═══════════════════════════════════════════
+// MEJORA 4: JOURNAL COMPLIANCE BADGE
+// ═══════════════════════════════════════════
+function buildComplianceBadge(wordCount, refCount) {
+  const targetWords = parseInt(document.getElementById('p2-words').value);
+  const maxRefs = parseInt(document.getElementById('p2-refs').value);
+  const wordOk = wordCount >= targetWords * 0.8 && wordCount <= targetWords * 1.25;
+  const refOk  = refCount <= maxRefs;
+  const cls = (wordOk && refOk) ? 'cb-ok' : (!wordOk && !refOk) ? 'cb-err' : 'cb-warn';
+  const icon = (wordOk && refOk) ? '✅' : '⚠️';
+  const msg = [
+    wordOk ? `${wordCount} palabras ✓` : `${wordCount} palabras (objetivo: ~${targetWords})`,
+    refOk  ? `${refCount} refs ✓` : `${refCount} refs (máx. ${maxRefs})`
+  ].join(' · ');
+  return `<span class="compliance-badge ${cls}">${icon} ${msg}</span>`;
+}
+
+// ═══════════════════════════════════════════
+// MEJORA 5: PDF EXPORT
+// ═══════════════════════════════════════════
+function exportPDF() {
+  if (!STATE.currentResult) { alert('Genera una introducción primero.'); return; }
+  window.print();
+}
+
+// ═══════════════════════════════════════════
+// MEJORA 7: EVIDENCE PYRAMID
+// ═══════════════════════════════════════════
+function buildEvidencePyramid(refs) {
+  const counts = {meta:0,rct:0,cohort:0,other:0};
+  refs.forEach(r => {
+    const t = (r.type||'').toLowerCase();
+    if (t.includes('meta')||t.includes('systematic')) counts.meta++;
+    else if (t.includes('rct')||t.includes('random')) counts.rct++;
+    else if (t.includes('cohort')||t.includes('observ')||t.includes('case')) counts.cohort++;
+    else counts.other++;
+  });
+  const total = refs.length || 1;
+  const levels = [
+    {label:'Meta-análisis / RS',count:counts.meta,color:'#059669',pct:counts.meta/total},
+    {label:'Ensayos clínicos (RCT)',count:counts.rct,color:'#2563eb',pct:counts.rct/total},
+    {label:'Cohortes / Observacionales',count:counts.cohort,color:'#d97706',pct:counts.cohort/total},
+    {label:'Otras fuentes',count:counts.other,color:'#9ca3af',pct:counts.other/total},
+  ];
+  return `
+    <div style="margin-top:16px;padding:16px 20px;background:var(--s2);border:1px solid var(--border);border-radius:var(--r)">
+      <div style="font-size:11px;font-weight:500;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">📐 Pirámide de evidencia</div>
+      <div class="evidence-pyramid">
+        ${levels.map((l,i)=>{
+          const w = Math.max(20 + l.pct*60, l.count>0?20:0) + (i*15);
+          return l.count>0 ? `<div class="pyr-level" title="${l.label}" style="width:${Math.min(w,100)}%;background:${l.color};padding:6px;min-width:60px">
+            <span style="font-size:10px">${l.count}</span><span style="font-size:9px;opacity:.85">${l.label}</span>
+          </div>` : '';
+        }).join('')}
+      </div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════
+// MEJORA 8: ALTERNATIVE VERSIONS
+// ═══════════════════════════════════════════
+function switchAltVersion(idx) {
+  STATE.currentAlt = idx;
+  document.querySelectorAll('.alt-btn').forEach((b,i)=>b.classList.toggle('btn-primary',i===idx));
+  const v = STATE.altVersions[idx];
+  if (v) {
+    STATE.currentResult = v;
+    STATE.refMap = {};
+    (v.references||[]).forEach(r=>{STATE.refMap[r.num]=r;});
+    document.getElementById('intro-text').innerHTML = formatIntroWithTooltips(v.introduction||'', STATE.refMap);
+    document.getElementById('result-refs').innerHTML = (v.references||[]).map(r=>renderRef(r)).join('');
+  }
+}
+
+// ═══════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════
+window.addEventListener('DOMContentLoaded',()=>{
+  init();
+  loadHistory();
+  const savedKey = localStorage.getItem('ig-key');
+  if (savedKey) document.getElementById('ob-key').value = savedKey;
+});
+</script>
+</body>
+</html>
