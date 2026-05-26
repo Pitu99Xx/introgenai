@@ -272,6 +272,30 @@ body.dark .alert-info{background:#1e3a5f;border-color:#1d4ed8;color:#bfdbfe}
 body.dark .alert-ok{background:#052e16;border-color:#166534;color:#bbf7d0}
 body.dark .alert-warn{background:#451a03;border-color:#78350f;color:#fde68a}
 
+/* ── DOI ARTICLE CARDS ── */
+.doi-card{background:#fff;border:1px solid var(--border);border-radius:var(--rl);padding:14px 16px;margin-bottom:8px;transition:border-color .2s}
+.doi-card.loading{opacity:.7}
+.doi-card.has-abstract{border-left:3px solid var(--teal)}
+.doi-card.needs-text{border-left:3px solid var(--amber)}
+.doi-card.error-card{border-left:3px solid var(--red);background:#fef2f2}
+body.dark .doi-card{background:#1e293b;border-color:#334155}
+body.dark .doi-card.error-card{background:#2d1515}
+.doi-card-header{display:flex;align-items:flex-start;gap:10px}
+.doi-card-icon{font-size:20px;flex-shrink:0;margin-top:1px}
+.doi-card-meta{flex:1;min-width:0}
+.doi-card-title{font-size:13px;font-weight:500;color:var(--text);margin-bottom:3px;line-height:1.4}
+.doi-card-authors{font-size:11px;color:var(--t2);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.doi-card-journal{font-size:11px;color:var(--t3)}
+.doi-card-abstract{font-size:11px;color:var(--t2);margin-top:8px;padding:8px 10px;background:#f7f8fa;border-radius:6px;line-height:1.6;max-height:80px;overflow:hidden;position:relative}
+.doi-card-abstract::after{content:'';position:absolute;bottom:0;left:0;right:0;height:20px;background:linear-gradient(transparent,#f7f8fa)}
+body.dark .doi-card-abstract{background:#0f172a}
+body.dark .doi-card-abstract::after{background:linear-gradient(transparent,#0f172a)}
+.doi-spinner{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.doi-input-row{display:flex;gap:8px;margin-bottom:12px}
+.doi-input-row input{flex:1}
+.doi-counter{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:3px 9px;border-radius:12px;background:#eff6ff;color:var(--accent);border:1px solid #bfdbfe;font-weight:500}
+
 /* ── CITATION HEATMAP (Mejora 3) ── */
 .heatmap-on .sent-meta{background:rgba(16,185,129,.15);border-left:3px solid #10b981;padding-left:6px;border-radius:0 4px 4px 0}
 .heatmap-on .sent-rct{background:rgba(37,99,235,.12);border-left:3px solid var(--accent);padding-left:6px;border-radius:0 4px 4px 0}
@@ -502,6 +526,23 @@ body.dark .kbd{background:#334155;border-color:#475569;color:#94a3b8}
               <div class="pico-item"><div class="pico-label">O · Outcome</div><div id="pico-o">–</div></div>
             </div>
           </div>
+
+          <!-- ══ SECCIÓN DOIs PROPIOS ══ -->
+          <div class="sh" style="margin-top:24px">
+            📚 Artículos propios (desde tu bibliografía previa)
+            <span id="doi-counter" style="display:none" class="doi-counter">0 artículos</span>
+          </div>
+          <div class="alert alert-info" style="margin-bottom:12px">
+            <span>💡</span>
+            <span>Pega los DOIs de artículos que ya hayas identificado. El sistema cargará automáticamente título, autores y resumen, y los priorizará en la introducción. Si el artículo no es de acceso abierto, podrás pegar el texto tú mismo.</span>
+          </div>
+          <div class="doi-input-row">
+            <input type="text" id="doi-input"
+              placeholder="DOI: 10.1016/j.chest.2021.05.031  ·  PMID: 34560256  ·  https://doi.org/..."
+              onkeydown="if(event.key==='Enter')addUserDOI()">
+            <button class="btn btn-success" onclick="addUserDOI()" id="doi-add-btn">+ Añadir</button>
+          </div>
+          <div id="user-articles-list"></div>
 
           <div class="sh" style="margin-top:24px">📄 Manuscrito (opcional pero recomendado)</div>
           <div class="alert alert-info" style="margin-bottom:14px">
@@ -937,7 +978,8 @@ const STATE = {
   currentAlt: 0,
   darkMode: false,
   heatmapOn: false,
-  refMap: {}   // num -> ref object for tooltip lookup
+  refMap: {},      // num -> ref object for tooltip lookup
+  userArticles: [] // user-provided DOIs with fetched metadata
 };
 
 const DATABASES = [
@@ -1342,21 +1384,35 @@ async function runGenerationPipeline() {
   }
 
   const deduped = deduplicateArticles(allArticles);
-  addLog('ok', `Total artículos únicos recuperados: ${deduped.length}`);
+  addLog('ok', `Total artículos únicos recuperados de bases de datos: ${deduped.length}`);
 
-  if (deduped.length === 0) {
-    addLog('warn', 'Sin resultados en bases de datos. Activando modo conocimiento del modelo como respaldo.');
+  // ── Merge user-provided articles ──
+  const userRefs = userArticlesToRefs(0); // temp num, reassigned later
+  if (userRefs.length) {
+    addLog('ok', `📚 Artículos propios cargados: ${userRefs.length} (priorizados en la introducción)`);
+    userRefs.forEach(r => addLog('info', `  ★ ${r.authors?.split(',')[0]||'?'} (${r.year||'?'}) — ${r.title?.slice(0,60)}...`));
+  }
+
+  if (deduped.length === 0 && userRefs.length === 0) {
+    addLog('warn', 'Sin resultados. Activando modo conocimiento del modelo como respaldo.');
   }
 
   // ════════════════════════════════════════
   // PHASE 3 — AI relevance filtering & ranking
   // ════════════════════════════════════════
   setProgress(45, 'Fase 3/5 — Evaluando relevancia y seleccionando referencias...');
-  addLog('info', `Analizando ${deduped.length} artículos por relevancia para el estudio...`);
+  addLog('info', `Analizando ${deduped.length} artículos por relevancia (+ ${userRefs.length} propios)...`);
 
-  const selectedRefs = deduped.length >= 3
-    ? await filterAndRankArticles(deduped, title, area, hypothesis, maxRefs, signal)
+  const selectedFromDB = deduped.length >= 3
+    ? await filterAndRankArticles(deduped, title, area, hypothesis,
+        Math.max(maxRefs - userRefs.length, 5), signal)
     : [];
+
+  // User articles ALWAYS included, numbered first for visibility in the prompt
+  const selectedRefs = [
+    ...userRefs.map((r,i) => ({...r, num: i+1, role: r.role||'user-provided'})),
+    ...selectedFromDB.map((r,i) => ({...r, num: userRefs.length + i + 1}))
+  ];
 
   addLog('ok', `Referencias seleccionadas: ${selectedRefs.length} (de ${deduped.length} recuperadas)`);
   selectedRefs.forEach(r => addLog('info',
@@ -1689,12 +1745,20 @@ async function writeIntroWithRealRefs(refs, title, area, studyType, hypothesis, 
 
   const fmt = nums => nums.length ? nums.map(n=>`[${n}]`).join(', ') : '(ninguna asignada)';
 
-  // Build numbered reference list
-  const refList = refs.map(r =>
+  // Separate user-provided refs from database refs for prompt clarity
+  const userProvided = refs.filter(r => r.role === 'user-provided' || r.priority);
+  const dbRefs       = refs.filter(r => r.role !== 'user-provided' && !r.priority);
+
+  const fmtRef = r =>
     `[${r.num}] ${r.authors||'Authors'} (${r.year||'?'}). "${r.title}". ${r.journal||''}.`
     + (r.doi ? ` DOI:${r.doi}` : r.pmid ? ` PMID:${r.pmid}` : '')
-    + ` {role:${r.role||'general'}}`
-  ).join('\n');
+    + (r.abstract ? ` | Abstract: ${r.abstract.slice(0,200)}...` : '')
+    + ` {role:${r.role||'general'}}`;
+
+  const refList = [
+    userProvided.length ? `== REFERENCIAS DEL AUTOR (★ PRIORIZAR — usar siempre) ==\n${userProvided.map(fmtRef).join('\n')}` : '',
+    dbRefs.length       ? `== REFERENCIAS DE BASES DE DATOS ==\n${dbRefs.map(fmtRef).join('\n')}` : ''
+  ].filter(Boolean).join('\n\n') || refs.map(fmtRef).join('\n');
 
   const toneInstr = {
     academic:'Formal academic tone, precise scientific language, third person.',
@@ -1703,18 +1767,25 @@ async function writeIntroWithRealRefs(refs, title, area, studyType, hypothesis, 
     narrative:'Flowing narrative prose, comprehensive coverage.',
   }[tone] || 'Formal academic tone.';
 
+  const priorityNote = userProvided.length
+    ? `★ AUTHOR-PROVIDED REFERENCES (must be cited — the author specifically selected these):
+${userProvided.map(r=>`  [${r.num}] ${r.title}`).join('\n')}
+
+` : '';
+
   const systemPrompt = `You are an expert scientific writer for peer-reviewed medical journals.
 
 LANGUAGE: Write entirely in ${langName}.
 
 TASK: Write a scientific introduction using EXCLUSIVELY the numbered references provided.
 
-══ MANDATORY CITATION RULES ══
+${priorityNote}══ MANDATORY CITATION RULES ══
 1. Use ONLY the reference numbers provided in the list below — do NOT invent numbers outside this list.
 2. Every citation must be written as a complete bracket on a single line: [1] or [1,2] or [3,4,5].
    NEVER split a bracket across lines (no "[1" without "]" on the same line).
 3. YOU MUST CITE EVERY REFERENCE in the list at least once — distribute them across the text.
-4. Numbered citations must reflect the provided numbering exactly.
+4. Author-provided references (★) MUST appear in the text — they are the author's own selection.
+5. Numbered citations must reflect the provided numbering exactly.
 
 ══ PARAGRAPH STRUCTURE AND CITATION ASSIGNMENT ══
 Write exactly 4 paragraphs (~${Math.round(targetWords/4)} words each, total ~${targetWords} words):
@@ -2572,6 +2643,297 @@ function switchAltVersion(idx) {
     document.getElementById('intro-text').innerHTML = formatIntroWithTooltips(v.introduction||'', STATE.refMap);
     document.getElementById('result-refs').innerHTML = (v.references||[]).map(r=>renderRef(r)).join('');
   }
+}
+
+// ═══════════════════════════════════════════
+// DOI / PMID LOOKUP — artículos propios
+// ═══════════════════════════════════════════
+
+async function addUserDOI() {
+  const input = document.getElementById('doi-input');
+  const raw   = input.value.trim();
+  if (!raw) return;
+
+  // Normalize input → extract DOI or PMID
+  let doi  = '';
+  let pmid = '';
+
+  const pmidMatch = raw.match(/(?:PMID:?\s*)(\d{6,9})/i);
+  if (pmidMatch) {
+    pmid = pmidMatch[1];
+  } else {
+    doi = raw
+      .replace(/^https?:\/\/doi\.org\//i, '')
+      .replace(/^doi:\s*/i, '')
+      .replace(/\s/g, '')
+      .toLowerCase();
+  }
+
+  // Deduplicate — only match on non-empty identifiers to avoid false positives
+  const isDuplicate =
+    (doi  && STATE.userArticles.some(a => a.doi  && (a.doi||'').toLowerCase() === doi)) ||
+    (pmid && STATE.userArticles.some(a => a.pmid && a.pmid === pmid));
+  if (isDuplicate) { input.value = ''; return; }
+
+  // Add placeholder card immediately (loading state)
+  const article = {
+    id: Date.now(), doi, pmid,
+    title:'', authors:'', journal:'', year:null,
+    abstract:'', manualText:'', hasAbstract:false,
+    loading:true, error:false, errorMsg:'', source:''
+  };
+  STATE.userArticles.push(article);
+  input.value = '';
+  renderUserArticles();
+  input.focus(); // keep focus on DOI input so user can add more immediately
+
+  // Fetch metadata async
+  try {
+    await lookupArticle(article);
+  } catch(e) {
+    article.error = true;
+    article.errorMsg = e.message;
+  }
+  article.loading = false;
+  renderUserArticles();
+}
+
+async function lookupArticle(art) {
+  // ── 1. Semantic Scholar (best: returns abstracts for ~60% of papers) ──
+  const s2id = art.doi ? `DOI:${art.doi}` : art.pmid ? `PMID:${art.pmid}` : null;
+  if (s2id) {
+    try {
+      const url = `https://api.semanticscholar.org/graph/v1/paper/${encodeURIComponent(s2id)}`
+        + `?fields=title,authors,year,venue,externalIds,abstract,publicationTypes`;
+      const res  = await fetch(url);
+      if (res.ok) {
+        const d = await res.json();
+        if (d.title) {
+          art.title   = d.title;
+          art.authors = (d.authors||[]).slice(0,4).map(a=>a.name).join(', ')
+            + ((d.authors||[]).length > 4 ? ', et al.' : '');
+          art.journal = d.venue || '';
+          art.year    = d.year  || null;
+          art.doi     = art.doi || d.externalIds?.DOI || '';
+          art.pmid    = art.pmid|| d.externalIds?.PubMed || '';
+          art.abstract = d.abstract || '';
+          art.hasAbstract = !!d.abstract;
+          art.source  = 'Semantic Scholar';
+        }
+      }
+    } catch {}
+  }
+
+  // ── 2. CrossRef (always works for DOIs, no abstract but great metadata) ──
+  if (!art.title && art.doi) {
+    try {
+      const res  = await fetch(`https://api.crossref.org/works/${encodeURIComponent(art.doi)}`
+        + `?mailto=introgen@example.com`);
+      if (res.ok) {
+        const d = await res.json();
+        const m = d.message;
+        art.title   = Array.isArray(m.title) ? m.title[0] : (m.title||'');
+        art.authors = (m.author||[]).slice(0,4)
+          .map(a => [a.family, a.given?.slice(0,1)].filter(Boolean).join(' '))
+          .join(', ') + ((m.author||[]).length > 4 ? ', et al.' : '');
+        art.journal = Array.isArray(m['container-title']) ? m['container-title'][0] : '';
+        art.year    = m['published-print']?.['date-parts']?.[0]?.[0]
+          || m['published-online']?.['date-parts']?.[0]?.[0] || null;
+        art.source  = 'CrossRef';
+      }
+    } catch {}
+  }
+
+  // ── 3. PubMed E-utilities (for PMIDs or as DOI fallback) ──
+  if (!art.title || (!art.hasAbstract && (art.pmid || art.doi))) {
+    try {
+      let ids = [];
+      if (art.pmid) {
+        ids = [art.pmid];
+      } else if (art.doi) {
+        const sRes  = await fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi`
+          + `?db=pubmed&term=${encodeURIComponent(art.doi+'[doi]')}&retmax=1&retmode=json&tool=IntroGen`);
+        const sData = await sRes.json();
+        ids = sData.esearchresult?.idlist || [];
+        if (ids[0]) art.pmid = ids[0];
+      }
+      if (ids.length) {
+        await sleep(350);
+        // esummary for basic metadata
+        const sumRes  = await fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi`
+          + `?db=pubmed&id=${ids[0]}&retmode=json&tool=IntroGen`);
+        const sumData = await sumRes.json();
+        const item    = sumData.result?.[ids[0]];
+        if (item && !art.title) {
+          art.title   = (item.title||'').replace(/<[^>]+>/g,'');
+          art.authors = (item.authors||[]).slice(0,4).map(a=>a.name).join(', ')
+            + ((item.authors||[]).length > 4 ? ', et al.' : '');
+          art.journal = item.fulljournalname || item.source || '';
+          art.year    = parseInt((item.pubdate||'').split(' ')[0]) || null;
+          art.doi     = art.doi || (item.articleids||[]).find(a=>a.idtype==='doi')?.value || '';
+          art.source  = 'PubMed';
+        }
+        // efetch for abstract
+        if (!art.hasAbstract) {
+          await sleep(350);
+          const abRes  = await fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi`
+            + `?db=pubmed&id=${ids[0]}&rettype=abstract&retmode=text&tool=IntroGen`);
+          const abText = await abRes.text();
+          // Extract abstract section (after "Abstract" line)
+          const abMatch = abText.match(/Abstract\s*\n([\s\S]+?)(?:\n\n|\nAuthor|PMID)/i);
+          if (abMatch) {
+            art.abstract    = abMatch[1].replace(/\n/g,' ').trim().slice(0,800);
+            art.hasAbstract = true;
+            if (!art.source.includes('PubMed')) art.source += '+PubMed';
+          }
+        }
+      }
+    } catch {}
+  }
+
+  // ── 4. Europe PMC (good for BMJ, Lancet, Cochrane) ──
+  if (!art.hasAbstract && (art.doi || art.pmid)) {
+    try {
+      const q   = art.pmid ? `EXT_ID:${art.pmid} SRC:MED` : `DOI:${art.doi}`;
+      const res = await fetch(`https://www.ebi.ac.uk/europepmc/webservices/rest/search`
+        + `?query=${encodeURIComponent(q)}&format=json&resultType=core&pageSize=1`);
+      if (res.ok) {
+        const d    = await res.json();
+        const item = d.resultList?.result?.[0];
+        if (item?.abstractText) {
+          art.abstract    = item.abstractText.slice(0,800);
+          art.hasAbstract = true;
+          if (!art.source) art.source = 'Europe PMC';
+        }
+        if (!art.title && item?.title) {
+          art.title   = item.title;
+          art.journal = item.journalTitle || '';
+          art.year    = parseInt(item.pubYear) || null;
+          art.source  = 'Europe PMC';
+        }
+      }
+    } catch {}
+  }
+
+  if (!art.title) throw new Error('No se encontró el artículo. Verifica el DOI.');
+}
+
+// HTML helpers — prevent DOM injection from API content
+function escHtml(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function stripHtml(s) {
+  // Remove any HTML tags that APIs (Europe PMC, etc.) may embed in abstracts/titles
+  return (s||'').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
+}
+
+function renderUserArticles() {
+  const list = document.getElementById('user-articles-list');
+  const counter = document.getElementById('doi-counter');
+  if (!list) return;
+
+  const n = STATE.userArticles.length;
+  if (n === 0) { list.innerHTML = ''; counter.style.display = 'none'; return; }
+  counter.style.display = 'inline-flex';
+  counter.textContent = `${n} artículo${n>1?'s':''}`;
+
+  list.innerHTML = STATE.userArticles.map((a,i) => {
+    if (a.loading) return `
+      <div class="doi-card loading" id="doi-card-${a.id}">
+        <div class="doi-card-header">
+          <div class="doi-spinner"></div>
+          <div class="doi-card-meta">
+            <div class="doi-card-title" style="color:var(--t3)">Cargando ${escHtml(a.doi||'PMID:'+a.pmid)}...</div>
+          </div>
+        </div>
+      </div>`;
+
+    if (a.error) return `
+      <div class="doi-card error-card" id="doi-card-${a.id}">
+        <div class="doi-card-header">
+          <div class="doi-card-icon">❌</div>
+          <div class="doi-card-meta">
+            <div class="doi-card-title">No se encontró: ${escHtml(a.doi||'PMID:'+a.pmid)}</div>
+            <div class="doi-card-authors" style="color:var(--red)">${escHtml(a.errorMsg)}</div>
+          </div>
+          <button class="file-rm" onclick="removeUserArticle(${i})" title="Eliminar">✕</button>
+        </div>
+      </div>`;
+
+    const typeIcon  = a.hasAbstract ? '✅' : '⚠️';
+    const statusTxt = a.hasAbstract
+      ? `<span class="badge b-green">Resumen disponible · ${a.source}</span>`
+      : `<span class="badge b-amber">Sin acceso abierto · ${a.source||'?'}</span>`;
+
+    const safeTitle    = escHtml(stripHtml(a.title));
+    const safeAuthors  = escHtml(a.authors);
+    const safeJournal  = escHtml(a.journal);
+    const safeAbstract = escHtml(stripHtml(a.abstract));
+    const safeManual   = escHtml(a.manualText||'');
+
+    return `
+      <div class="doi-card ${a.hasAbstract?'has-abstract':'needs-text'}" id="doi-card-${a.id}">
+        <div class="doi-card-header">
+          <div class="doi-card-icon">${typeIcon}</div>
+          <div class="doi-card-meta">
+            <div class="doi-card-title">${safeTitle}</div>
+            <div class="doi-card-authors">${safeAuthors}</div>
+            <div class="doi-card-journal">
+              ${safeJournal}${a.year?' · '+a.year:''}
+              ${a.doi?` · <a href="https://doi.org/${a.doi}" target="_blank" style="color:var(--accent);font-size:10px">doi:${escHtml(a.doi)}</a>`:''}
+              ${a.pmid?` · <a href="https://pubmed.ncbi.nlm.nih.gov/${a.pmid}" target="_blank" style="color:var(--accent);font-size:10px">PMID:${escHtml(a.pmid)}</a>`:''}
+            </div>
+            <div style="margin-top:5px">${statusTxt}</div>
+          </div>
+          <button class="file-rm" onclick="removeUserArticle(${i})" title="Eliminar" style="margin-left:8px">✕</button>
+        </div>
+        ${a.hasAbstract && a.abstract ? `
+          <div class="doi-card-abstract" title="${safeAbstract}">${safeAbstract}</div>` : ''}
+        ${!a.hasAbstract ? `
+          <div style="margin-top:10px">
+            <label style="font-size:11px;color:var(--amber);font-weight:500;margin-bottom:4px;display:block">
+              ⚠️ Artículo sin acceso abierto — pega aquí el resumen o fragmento del artículo:
+            </label>
+            <textarea rows="3" style="width:100%;font-size:12px;resize:vertical"
+              placeholder="Abstract o fragmento del artículo (no el DOI — ese va arriba)"
+              oninput="updateUserArticleText(${i}, this.value)"
+            >${safeManual}</textarea>
+          </div>` : ''}
+      </div>`;
+  }).join('');
+}
+
+function removeUserArticle(i) {
+  STATE.userArticles.splice(i, 1);
+  renderUserArticles();
+}
+
+function updateUserArticleText(i, text) {
+  if (STATE.userArticles[i]) {
+    STATE.userArticles[i].manualText  = text;
+    STATE.userArticles[i].hasAbstract = text.length > 30;
+  }
+}
+
+// Convert user articles to the same format as retrieved refs
+function userArticlesToRefs(startNum) {
+  return STATE.userArticles
+    .filter(a => !a.loading && !a.error && a.title)
+    .map((a, i) => ({
+      num:      startNum + i,
+      source:   'User-provided',
+      title:    a.title,
+      authors:  a.authors,
+      journal:  a.journal,
+      year:     a.year,
+      doi:      a.doi,
+      pmid:     a.pmid,
+      abstract: a.abstract || a.manualText || '',
+      type:     'article',
+      quality:  'high',
+      role:     'user-provided',
+      priority: true   // always include in writing
+    }));
 }
 
 // ═══════════════════════════════════════════
